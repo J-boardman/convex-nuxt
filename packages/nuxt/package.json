@@ -1,0 +1,48 @@
+{
+  "name": "@j-boardman/convex-nuxt",
+  "version": "0.0.0",
+  "description": "First-class Convex integration for Nuxt",
+  "license": "Apache-2.0",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/types.d.mts",
+      "import": "./dist/module.mjs"
+    },
+    "./runtime": {
+      "types": "./dist/runtime/index.d.ts",
+      "import": "./dist/runtime/index.js"
+    },
+    "./server": {
+      "types": "./dist/runtime/server/index.d.ts",
+      "import": "./dist/runtime/server/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "nuxt-module-build build",
+    "prepack": "pnpm run build",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@j-boardman/convex-vue": "workspace:*",
+    "@nuxt/kit": "4.5.2",
+    "@nuxt/schema": "4.5.2"
+  },
+  "peerDependencies": {
+    "convex": "^1.45.0",
+    "nuxt": "^4.5.0",
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "@nuxt/module-builder": "1.0.3",
+    "convex": "1.45.0",
+    "nuxt": "4.5.2",
+    "vue": "3.5.42"
+  }
+}

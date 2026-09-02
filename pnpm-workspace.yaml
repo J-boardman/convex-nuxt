@@ -1,0 +1,10 @@
+packages:
+  - packages/*
+  - playgrounds/*
+
+allowBuilds:
+  esbuild: true
+
+peerDependencyRules:
+  allowedVersions:
+    vue-sfc-transformer: 0.2.5

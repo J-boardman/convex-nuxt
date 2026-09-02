@@ -1,0 +1,42 @@
+{
+  "name": "@j-boardman/convex-vue",
+  "version": "0.0.0",
+  "description": "First-class Convex integration for Vue 3",
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./adapter": {
+      "types": "./dist/adapter/index.d.mts",
+      "import": "./dist/adapter/index.mjs"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.mts",
+      "import": "./dist/server/index.mjs"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "prepack": "pnpm run build",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "convex": "^1.45.0",
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "convex": "1.45.0",
+    "tsdown": "0.22.14",
+    "vue": "3.5.42"
+  }
+}

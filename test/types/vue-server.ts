@@ -1,6 +1,10 @@
 import type { ConvexHttpClient } from 'convex/browser'
 import { expectTypeOf } from 'vitest'
-import { createConvexHttpClient } from '@j-boardman/convex-vue/server'
+import {
+  createConvexHttpClient,
+  decodeConvexSsrSeed,
+  encodeConvexSsrSeed,
+} from '@j-boardman/convex-vue/server'
 
 const anonymousClient = createConvexHttpClient({
   url: 'https://example.convex.cloud',
@@ -19,3 +23,6 @@ createConvexHttpClient({
 
 // @ts-expect-error auth is supplied through the request-scoped token option
 createConvexHttpClient({ url: 'https://example.convex.cloud', clientOptions: { auth: 'shared' } })
+
+const bigintSeed = encodeConvexSsrSeed(42n)
+expectTypeOf(decodeConvexSsrSeed<bigint>(bigintSeed)).toEqualTypeOf<bigint>()

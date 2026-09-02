@@ -1,0 +1,83 @@
+#!/bin/sh
+# Does this message have the shape the project agreed? Truth and writing quality
+# remain review questions; this hook enforces only cheap, deterministic rules.
+set -e
+
+subject=$(sed -n '1p' "$1")
+
+# Git writes these subjects itself, or a rebase does.
+case "$subject" in
+  "Merge "*|"Revert "*|"Reapply "*|"fixup!"*|"squash!"*|"amend!"*) exit 0 ;;
+esac
+
+types="feat|fix|perf|refactor|docs|test|build|chore|spike"
+scopes="vue|nuxt|auth|pagination|adapters|playground|ci|build"
+
+fail() {
+  echo "commit-msg: $1" >&2
+  echo "" >&2
+  echo "  $subject" >&2
+  echo "" >&2
+  echo "  shape   type(scope): a sentence saying what is now true" >&2
+  echo "  types   $types" >&2
+  echo "  scopes  $scopes  (optional)" >&2
+  echo "  budget  72 characters, prefix included" >&2
+  echo "" >&2
+  echo "The long half of a sentence belongs in the body, not the subject." >&2
+  exit 1
+}
+
+echo "$subject" | grep -qE "^($types)(\(($scopes)\))?: ." ||
+  fail "no conventional prefix, or a type or scope that is not one of ours."
+
+if [ ${#subject} -gt 72 ]; then
+  fail "the subject is ${#subject} characters."
+fi
+
+if [ -n "$(sed -n '2p' "$1")" ]; then
+  fail "the line after the subject must be blank."
+fi
+
+described_work="added|adds|add|fixed|fixes|fix|updated|updates|update"
+described_work="$described_work|removed|removes|remove|refactored|refactors|refactor"
+described_work="$described_work|implemented|implements|implement|changed|changes|change"
+described_work="$described_work|created|creates|create|improved|improves|improve"
+described_work="$described_work|made|makes|make|bumped|bumps|bump"
+described_work="$described_work|introduced|introduces|introduce|renamed|renames|rename"
+described_work="$described_work|deleted|deletes|delete|wired|wires|wire"
+described_work="$described_work|supported|supports|support|enabled|enables|enable"
+described_work="$described_work|allowed|allows|allow"
+
+description=${subject#*: }
+if echo "$description" | grep -qiE "^($described_work)([[:space:]]|$)"; then
+  fail "this describes the work, not the behaviour. Say what is true after the commit."
+fi
+
+# Scope-to-path mismatches are useful review prompts, but not failures: one
+# truthful commit can cross boundaries and documentation can discuss any scope.
+scope=$(echo "$subject" | sed -n 's/^[a-z]*(\([a-z]*\)).*/\1/p')
+if [ -n "$scope" ]; then
+  matches=no
+  prose=no
+  while IFS= read -r file; do
+    [ -n "$file" ] || continue
+    case "$file" in
+      docs/*|*.md) prose=yes ;;
+    esac
+    case "$scope:$file" in
+      vue:packages/vue/*|vue:playgrounds/vue/*) matches=yes ;;
+      nuxt:packages/nuxt/*|nuxt:playgrounds/nuxt/*) matches=yes ;;
+      auth:*auth*|pagination:*pagination*) matches=yes ;;
+      adapters:packages/vue/src/adapter/*|adapters:packages/nuxt/src/runtime/*) matches=yes ;;
+      playground:playgrounds/*) matches=yes ;;
+      ci:.github/*|ci:.githooks/*) matches=yes ;;
+      build:package.json|build:tsconfig*|build:pnpm-lock.yaml|build:pnpm-workspace.yaml) matches=yes ;;
+    esac
+  done <<FILES
+$(git diff --cached --name-only)
+FILES
+
+  if [ "$matches" = no ] && [ "$prose" = no ]; then
+    echo "commit-msg: nothing under ($scope) changed. Fine if you meant it." >&2
+  fi
+fi

@@ -7,6 +7,7 @@ export type {
   ConvexVueClientOptions,
   ConvexVueOptions,
 } from './plugin.js'
+export { useConvexConnectionState } from './connection.js'
 export { useConvexQuery } from './query.js'
 export type {
   ConvexQuerySkip,

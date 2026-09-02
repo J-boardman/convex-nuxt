@@ -8,6 +8,9 @@
     "paths": {
       "@j-boardman/convex-vue": [
         "packages/vue/src/index.ts"
+      ],
+      "@j-boardman/convex-vue/server": [
+        "packages/vue/src/server/index.ts"
       ]
     }
   },

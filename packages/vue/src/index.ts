@@ -7,3 +7,12 @@ export type {
   ConvexVueClientOptions,
   ConvexVueOptions,
 } from './plugin.js'
+export { useConvexQuery } from './query.js'
+export type {
+  ConvexQuerySkip,
+  ConvexQueryState,
+  MaybeReactive,
+  ReactiveQueryArgsAndOptions,
+  UseConvexQueryOptions,
+  UseConvexQueryResult,
+} from './query.js'

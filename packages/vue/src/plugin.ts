@@ -13,7 +13,8 @@ export interface ConvexVueOptions {
   url: string
 }
 
-interface ConvexVueRuntime {
+/** @internal */
+export interface ConvexVueRuntime {
   client: ConvexClient | null
   close: () => Promise<void>
   url: string
@@ -34,7 +35,8 @@ const defaultDependencies: ConvexVuePluginDependencies = {
   isBrowser: () => typeof window !== 'undefined',
 }
 
-function requireRuntime(): ConvexVueRuntime {
+/** @internal */
+export function useConvexRuntime(): ConvexVueRuntime {
   const runtime = inject(convexVueRuntimeKey)
   if (!runtime) {
     throw new Error(
@@ -105,7 +107,7 @@ export function createConvexVuePlugin(
 export const convexVue: Plugin<[ConvexVueOptions]> = createConvexVuePlugin()
 
 export function useConvexClient(): ConvexClient {
-  const runtime = requireRuntime()
+  const runtime = useConvexRuntime()
   if (!runtime.client) {
     throw new Error(
       'useConvexClient() is browser-only. '
@@ -119,5 +121,5 @@ export function useConvexClient(): ConvexClient {
 }
 
 export function closeConvex(): Promise<void> {
-  return requireRuntime().close()
+  return useConvexRuntime().close()
 }

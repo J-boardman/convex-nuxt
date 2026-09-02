@@ -13,7 +13,9 @@
     "lint": "eslint .",
     "prepare": "git config core.hooksPath .githooks",
     "test": "pnpm run build && vitest run",
-    "typecheck": "pnpm --recursive --if-present run typecheck"
+    "typecheck": "pnpm run typecheck:packages && pnpm run test:types",
+    "typecheck:packages": "pnpm --recursive --if-present run typecheck",
+    "test:types": "tsc --project test/types/tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

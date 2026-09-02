@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "../..",
+    "declaration": false,
+    "declarationMap": false,
+    "isolatedDeclarations": false,
+    "paths": {
+      "@j-boardman/convex-vue": [
+        "packages/vue/src/index.ts"
+      ]
+    }
+  },
+  "include": [
+    "./**/*.ts"
+  ]
+}

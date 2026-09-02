@@ -1,7 +1,11 @@
-import { defineNuxtModule } from '@nuxt/kit'
+import { addPlugin, createResolver, defineNuxtModule } from '@nuxt/kit'
+import type { ConvexVueClientOptions } from '@j-boardman/convex-vue'
 import type { NuxtModule } from '@nuxt/schema'
+import { defu } from 'defu'
+import type { ConvexNuxtPublicRuntimeConfig } from './runtime/config.js'
 
 export interface ModuleOptions {
+  client?: ConvexVueClientOptions
   url?: string
 }
 
@@ -9,9 +13,30 @@ const convexNuxtModule: NuxtModule<ModuleOptions> = defineNuxtModule<ModuleOptio
   meta: {
     name: '@j-boardman/convex-nuxt',
     configKey: 'convex',
+    compatibility: {
+      nuxt: '>=4.5.0',
+    },
   },
-  defaults: {},
-  setup() {},
+  defaults: {
+    client: {},
+  },
+  setup(options, nuxt) {
+    const resolver = createResolver(import.meta.url)
+
+    const publicConfig = defu(
+      nuxt.options.runtimeConfig.public.convex,
+      {
+        client: options.client,
+        url: options.url ?? '',
+      } satisfies ConvexNuxtPublicRuntimeConfig,
+    ) as ConvexNuxtPublicRuntimeConfig
+
+    nuxt.options.runtimeConfig.public.convex = publicConfig
+
+    addPlugin({
+      src: resolver.resolve('./runtime/plugin'),
+    })
+  },
 })
 
 export default convexNuxtModule

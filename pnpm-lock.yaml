@@ -94,6 +94,9 @@ importers:
 
   playgrounds/vue:
     dependencies:
+      '@j-boardman/convex-playground-backend':
+        specifier: workspace:*
+        version: link:../backend
       '@j-boardman/convex-vue':
         specifier: workspace:*
         version: link:../../packages/vue

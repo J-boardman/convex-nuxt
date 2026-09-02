@@ -9,6 +9,7 @@
     "typecheck": "vue-tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@j-boardman/convex-playground-backend": "workspace:*",
     "@j-boardman/convex-vue": "workspace:*",
     "convex": "1.45.0",
     "vue": "3.5.42"

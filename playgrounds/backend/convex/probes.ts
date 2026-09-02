@@ -74,8 +74,9 @@ export const record = mutation({
       .order('asc')
       .take(25)
 
-    if (retained.length === 25) {
-      await ctx.db.delete(retained[0]._id)
+    const oldest = retained[0]
+    if (oldest && retained.length === 25) {
+      await ctx.db.delete(oldest._id)
     }
 
     const probeId = await ctx.db.insert('probes', {

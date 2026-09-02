@@ -1,10 +1,12 @@
-import { addPlugin, createResolver, defineNuxtModule } from '@nuxt/kit'
+import { addImports, addPlugin, createResolver, defineNuxtModule } from '@nuxt/kit'
 import type { ConvexVueClientOptions } from '@j-boardman/convex-vue'
 import type { NuxtModule } from '@nuxt/schema'
 import { defu } from 'defu'
+import { convexAutoImports } from './auto-imports.js'
 import type { ConvexNuxtPublicRuntimeConfig } from './runtime/config.js'
 
 export interface ModuleOptions {
+  autoImports?: boolean
   client?: ConvexVueClientOptions
   url?: string
 }
@@ -18,6 +20,7 @@ const convexNuxtModule: NuxtModule<ModuleOptions> = defineNuxtModule<ModuleOptio
     },
   },
   defaults: {
+    autoImports: true,
     client: {},
   },
   setup(options, nuxt) {
@@ -36,7 +39,21 @@ const convexNuxtModule: NuxtModule<ModuleOptions> = defineNuxtModule<ModuleOptio
     addPlugin({
       src: resolver.resolve('./runtime/plugin'),
     })
+
+    if (options.autoImports) {
+      addImports([...convexAutoImports])
+    }
   },
 })
 
 export default convexNuxtModule
+
+declare module '@nuxt/schema' {
+  interface NuxtConfig {
+    convex?: ModuleOptions
+  }
+
+  interface NuxtOptions {
+    convex: ModuleOptions
+  }
+}

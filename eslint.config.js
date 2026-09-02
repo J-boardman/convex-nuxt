@@ -7,6 +7,7 @@ export default tseslint.config(
       '**/.nuxt/**',
       '**/.output/**',
       '**/coverage/**',
+      '**/convex/_generated/**',
       '**/dist/**',
       '**/node_modules/**',
     ],

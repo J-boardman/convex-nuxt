@@ -1,0 +1,21 @@
+{
+  "name": "@j-boardman/convex-playground-backend",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "codegen": "convex codegen",
+    "test": "vitest run",
+    "typecheck": "tsc --project convex/tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "convex": "1.45.0"
+  },
+  "devDependencies": {
+    "@edge-runtime/vm": "5.0.0",
+    "convex-test": "0.0.56",
+    "typescript": "5.9.3",
+    "vite": "8.2.2",
+    "vitest": "4.1.11"
+  }
+}

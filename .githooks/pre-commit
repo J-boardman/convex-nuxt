@@ -1,0 +1,6 @@
+#!/bin/sh
+# Is this micro-goal coherent? These fast checks catch changes that are hard to
+# review because their types or formatting no longer agree with the source.
+set -e
+pnpm typecheck
+pnpm lint

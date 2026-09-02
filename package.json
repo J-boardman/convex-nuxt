@@ -11,6 +11,7 @@
   "scripts": {
     "build": "pnpm --recursive --if-present run build",
     "lint": "eslint .",
+    "prepare": "git config core.hooksPath .githooks",
     "test": "pnpm run build && vitest run",
     "typecheck": "pnpm --recursive --if-present run typecheck"
   },

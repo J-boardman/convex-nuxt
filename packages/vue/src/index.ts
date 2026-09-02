@@ -16,3 +16,11 @@ export type {
   UseConvexQueryOptions,
   UseConvexQueryResult,
 } from './query.js'
+export {
+  useConvexAction,
+  useConvexMutation,
+} from './writes.js'
+export type {
+  ConvexAction,
+  ConvexMutation,
+} from './writes.js'

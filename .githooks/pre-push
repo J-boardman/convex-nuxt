@@ -1,0 +1,5 @@
+#!/bin/sh
+# Does the repository still work? Pay for the deterministic suite once per push
+# rather than once per micro-commit.
+set -e
+pnpm test

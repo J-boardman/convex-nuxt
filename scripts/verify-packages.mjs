@@ -76,12 +76,131 @@ async function verifyArchive(packageRoot, archive, extractionRoot) {
   return manifest
 }
 
-async function verifyConsumer(temporaryRoot, vueArchive, nuxtArchive) {
-  const consumerRoot = join(temporaryRoot, 'consumer')
+async function installConsumer(consumerRoot) {
+  run(pnpm, [
+    'install',
+    '--ignore-scripts',
+    '--no-frozen-lockfile',
+  ], consumerRoot)
+}
+
+async function verifyVueConsumer(temporaryRoot, vueArchive) {
+  const consumerRoot = join(temporaryRoot, 'vue-consumer')
+  await mkdir(consumerRoot)
+  await mkdir(join(consumerRoot, 'src'))
+
+  await writeFile(join(consumerRoot, 'package.json'), JSON.stringify({
+    name: 'packed-convex-vue-consumer',
+    private: true,
+    type: 'module',
+    dependencies: {
+      '@j-boardman/convex-vue': `file:${vueArchive}`,
+      convex: '1.45.0',
+      vue: '3.5.42',
+    },
+    devDependencies: {
+      '@vitejs/plugin-vue': '6.0.8',
+      typescript: '5.9.3',
+      vite: '8.2.2',
+      'vue-tsc': '3.3.11',
+    },
+  }, null, 2))
+
+  await writeFile(join(consumerRoot, 'check.mjs'), `
+import assert from 'node:assert/strict'
+import * as convexVue from '@j-boardman/convex-vue'
+import * as vueAdapter from '@j-boardman/convex-vue/adapter'
+import * as vueServer from '@j-boardman/convex-vue/server'
+
+assert.equal(typeof convexVue.convexVue, 'object')
+assert.equal(typeof convexVue.useConvexPaginatedQuery, 'function')
+assert.equal(typeof vueAdapter.installConvexSsrBridge, 'function')
+assert.equal(typeof vueServer.createConvexHttpClient, 'function')
+`)
+
+  await writeFile(join(consumerRoot, 'check.ts'), `
+import {
+  convexVue,
+  useConvexPaginatedQuery,
+  useConvexQuery,
+  type ConvexVueOptions,
+} from '@j-boardman/convex-vue'
+import { installConvexSsrBridge } from '@j-boardman/convex-vue/adapter'
+import { createConvexHttpClient } from '@j-boardman/convex-vue/server'
+
+const vueOptions: ConvexVueOptions = { url: 'https://example.convex.cloud' }
+
+void vueOptions
+void convexVue
+void useConvexQuery
+void useConvexPaginatedQuery
+void installConvexSsrBridge
+void createConvexHttpClient
+`)
+
+  await writeFile(join(consumerRoot, 'index.html'), `
+<div id="app"></div>
+<script type="module" src="/src/main.ts"></script>
+`)
+
+  await writeFile(join(consumerRoot, 'src/App.vue'), `
+<script setup lang="ts">
+import { useConvexConnectionState } from '@j-boardman/convex-vue'
+
+const connection = useConvexConnectionState()
+</script>
+
+<template>
+  <main>Connected: {{ connection.isWebSocketConnected }}</main>
+</template>
+`)
+
+  await writeFile(join(consumerRoot, 'src/main.ts'), `
+import { createApp } from 'vue'
+import { convexVue } from '@j-boardman/convex-vue'
+import App from './App.vue'
+
+createApp(App)
+  .use(convexVue, { url: 'https://example.convex.cloud' })
+  .mount('#app')
+`)
+
+  await writeFile(join(consumerRoot, 'vite.config.ts'), `
+import vue from '@vitejs/plugin-vue'
+import { defineConfig } from 'vite'
+
+export default defineConfig({ plugins: [vue()] })
+`)
+
+  await writeFile(join(consumerRoot, 'tsconfig.json'), JSON.stringify({
+    compilerOptions: {
+      lib: ['ES2022', 'DOM'],
+      module: 'NodeNext',
+      moduleResolution: 'NodeNext',
+      noEmit: true,
+      skipLibCheck: true,
+      strict: true,
+      target: 'ES2022',
+    },
+    include: ['check.ts', 'src/**/*.ts', 'src/**/*.vue', 'vite.config.ts'],
+  }, null, 2))
+
+  await installConsumer(consumerRoot)
+  run(process.execPath, ['check.mjs'], consumerRoot)
+  run(pnpm, ['exec', 'vue-tsc', '--noEmit'], consumerRoot)
+  run(pnpm, ['exec', 'vite', 'build'], consumerRoot)
+}
+
+async function verifyNuxtConsumer(
+  temporaryRoot,
+  vueArchive,
+  nuxtArchive,
+) {
+  const consumerRoot = join(temporaryRoot, 'nuxt-consumer')
   await mkdir(consumerRoot)
 
   await writeFile(join(consumerRoot, 'package.json'), JSON.stringify({
-    name: 'packed-convex-consumer',
+    name: 'packed-convex-nuxt-consumer',
     private: true,
     type: 'module',
     dependencies: {
@@ -89,8 +208,11 @@ async function verifyConsumer(temporaryRoot, vueArchive, nuxtArchive) {
       '@j-boardman/convex-vue': `file:${vueArchive}`,
       convex: '1.45.0',
       nuxt: '4.5.2',
-      typescript: '5.9.3',
       vue: '3.5.42',
+    },
+    devDependencies: {
+      typescript: '5.9.3',
+      'vue-tsc': '3.3.11',
     },
   }, null, 2))
 
@@ -107,71 +229,37 @@ import assert from 'node:assert/strict'
 import convexNuxt from '@j-boardman/convex-nuxt'
 import * as nuxtRuntime from '@j-boardman/convex-nuxt/runtime'
 import * as nuxtServer from '@j-boardman/convex-nuxt/server'
-import * as convexVue from '@j-boardman/convex-vue'
-import * as vueAdapter from '@j-boardman/convex-vue/adapter'
-import * as vueServer from '@j-boardman/convex-vue/server'
 
 assert.equal(typeof convexNuxt, 'function')
 assert.equal(typeof nuxtRuntime.useConvexQuery, 'function')
 assert.equal(typeof nuxtServer.useConvexHttpClient, 'function')
-assert.equal(typeof convexVue.convexVue, 'object')
-assert.equal(typeof convexVue.useConvexPaginatedQuery, 'function')
-assert.equal(typeof vueAdapter.installConvexSsrBridge, 'function')
-assert.equal(typeof vueServer.createConvexHttpClient, 'function')
 `)
 
-  await writeFile(join(consumerRoot, 'check.ts'), `
-import convexNuxt from '@j-boardman/convex-nuxt'
-import type { ModuleOptions } from '@j-boardman/convex-nuxt'
-import {
-  useConvexHttpClient,
-  type UseConvexHttpClientOptions,
-} from '@j-boardman/convex-nuxt/server'
-import {
-  convexVue,
-  useConvexPaginatedQuery,
-  useConvexQuery,
-  type ConvexVueOptions,
-} from '@j-boardman/convex-vue'
-import { installConvexSsrBridge } from '@j-boardman/convex-vue/adapter'
-import { createConvexHttpClient } from '@j-boardman/convex-vue/server'
+  await writeFile(join(consumerRoot, 'app.vue'), `
+<script setup lang="ts">
+const connection = useConvexConnectionState()
+</script>
 
-const moduleOptions: ModuleOptions = { url: 'https://example.convex.cloud' }
-const vueOptions: ConvexVueOptions = { url: 'https://example.convex.cloud' }
-const serverOptions: UseConvexHttpClientOptions = { token: null }
+<template>
+  <main>Connected: {{ connection.isWebSocketConnected }}</main>
+</template>
+`)
 
-void convexNuxt
-void moduleOptions
-void vueOptions
-void serverOptions
-void convexVue
-void useConvexQuery
-void useConvexPaginatedQuery
-void useConvexHttpClient
-void installConvexSsrBridge
-void createConvexHttpClient
+  await writeFile(join(consumerRoot, 'nuxt.config.ts'), `
+export default defineNuxtConfig({
+  modules: ['@j-boardman/convex-nuxt'],
+  convex: { url: 'https://example.convex.cloud' },
+})
 `)
 
   await writeFile(join(consumerRoot, 'tsconfig.json'), JSON.stringify({
-    compilerOptions: {
-      lib: ['ES2022', 'DOM'],
-      module: 'NodeNext',
-      moduleResolution: 'NodeNext',
-      noEmit: true,
-      skipLibCheck: true,
-      strict: true,
-      target: 'ES2022',
-    },
-    include: ['check.ts'],
+    extends: './.nuxt/tsconfig.json',
   }, null, 2))
 
-  run(pnpm, [
-    'install',
-    '--ignore-scripts',
-    '--no-frozen-lockfile',
-  ], consumerRoot)
+  await installConsumer(consumerRoot)
   run(process.execPath, ['check.mjs'], consumerRoot)
-  run(pnpm, ['exec', 'tsc', '--project', 'tsconfig.json'], consumerRoot)
+  run(pnpm, ['exec', 'nuxt', 'typecheck'], consumerRoot)
+  run(pnpm, ['exec', 'nuxt', 'build'], consumerRoot)
 }
 
 const temporaryRoot = await mkdtemp(join(tmpdir(), 'convex-packages-'))
@@ -201,7 +289,8 @@ try {
     vueManifest.version,
   )
 
-  await verifyConsumer(temporaryRoot, vueArchive, nuxtArchive)
+  await verifyVueConsumer(temporaryRoot, vueArchive)
+  await verifyNuxtConsumer(temporaryRoot, vueArchive, nuxtArchive)
   process.stdout.write(
     'Packed Vue and Nuxt packages passed publication checks.\n',
   )

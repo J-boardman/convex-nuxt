@@ -22,6 +22,9 @@ const app = createApp(App)
 
 app.use(convexVue, {
   url: import.meta.env.VITE_CONVEX_URL,
+  client: {
+    expectAuth: true,
+  },
 })
 
 app.mount('#app')
@@ -30,6 +33,11 @@ app.mount('#app')
 The plugin creates one browser `ConvexClient` for the Vue application and
 closes it when the application unmounts. It never creates a WebSocket client
 during server rendering.
+
+The optional `client` object accepts Convex's browser transport options,
+including auth-startup behavior, token-refresh leeway, logging, diagnostics,
+and a custom WebSocket constructor. The `disabled` option is intentionally
+excluded because this integration's browser composables require a live client.
 
 ## Queries and writes
 

@@ -4,10 +4,7 @@ import { inject } from 'vue'
 import type { App, InjectionKey, Plugin } from 'vue'
 import type { ConvexAuthController } from './auth.js'
 
-export type ConvexVueClientOptions = Pick<
-  ConvexClientOptions,
-  'skipConvexDeploymentUrlCheck' | 'unsavedChangesWarning'
->
+export type ConvexVueClientOptions = Omit<ConvexClientOptions, 'disabled'>
 
 export interface ConvexVueOptions {
   client?: ConvexVueClientOptions

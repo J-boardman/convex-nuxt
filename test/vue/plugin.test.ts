@@ -7,6 +7,7 @@ import {
   createConvexVuePlugin,
   useConvexClient,
 } from '../../packages/vue/src/plugin.js'
+import type { ConvexVueClientOptions } from '../../packages/vue/src/plugin.js'
 
 interface FakeClient {
   client: ConvexClient
@@ -24,12 +25,17 @@ function createFakeClient(): FakeClient {
   }
 }
 
-function install(app: App, url: string, createClient: () => ConvexClient) {
+function install(
+  app: App,
+  url: string,
+  createClient: (url: string, options: ConvexVueClientOptions) => ConvexClient,
+  client?: ConvexVueClientOptions,
+) {
   const plugin = createConvexVuePlugin({
     createClient,
     isBrowser: () => true,
   })
-  app.use(plugin, { url })
+  app.use(plugin, { client, url })
 }
 
 describe('convexVue', () => {
@@ -66,6 +72,33 @@ describe('convexVue', () => {
 
     expect(firstApp.runWithContext(useConvexClient)).toBe(first.client)
     expect(secondApp.runWithContext(useConvexClient)).toBe(second.client)
+  })
+
+  it('forwards supported Convex transport options to the browser client', () => {
+    const app = createSSRApp({})
+    const fake = createFakeClient()
+    const createClient = vi.fn(() => fake.client)
+
+    install(app, 'https://one.convex.cloud', createClient, {
+      authRefreshTokenLeewaySeconds: 20,
+      expectAuth: true,
+      initialAuthTokenReuse: true,
+      logger: false,
+      reportDebugInfoToConvex: true,
+      verbose: true,
+    })
+
+    expect(createClient).toHaveBeenCalledWith(
+      'https://one.convex.cloud',
+      {
+        authRefreshTokenLeewaySeconds: 20,
+        expectAuth: true,
+        initialAuthTokenReuse: true,
+        logger: false,
+        reportDebugInfoToConvex: true,
+        verbose: true,
+      },
+    )
   })
 
   it('does not construct a WebSocket client during SSR', () => {

@@ -6,6 +6,7 @@ import {
   useConvexClient,
   useConvexConnectionState,
   useConvexMutation,
+  useConvexPaginatedQuery,
   useConvexQuery,
 } from '@j-boardman/convex-nuxt/runtime'
 import type {
@@ -18,6 +19,11 @@ defineProps<{
 }>()
 
 const probes = useConvexQuery(api.probes.list, { surface: 'nuxt' })
+const paginatedProbes = useConvexPaginatedQuery(
+  api.probes.paginated,
+  { surface: 'nuxt' },
+  { initialNumItems: 3 },
+)
 const auth = useConvexAuth()
 const client = import.meta.client ? useConvexClient() : undefined
 const connection = import.meta.client ? useConvexConnectionState() : undefined
@@ -169,6 +175,31 @@ const connectionCount = computed(() => connection?.value.connectionCount ?? 0)
         </li>
         <li class="complete"><span>04</span><strong>SSR seed</strong><small>payload reused</small></li>
       </ol>
+    </section>
+
+    <section class="pagination-panel" aria-labelledby="pagination-title">
+      <div>
+        <p class="overline">Reactive pagination</p>
+        <h2 id="pagination-title">Incremental event window</h2>
+        <p class="pagination-copy">
+          {{ paginatedProbes.results.length }} events loaded ·
+          {{ paginatedProbes.state.status }}
+        </p>
+      </div>
+      <ol v-if="paginatedProbes.results.length" class="page-items">
+        <li v-for="probe in paginatedProbes.results" :key="probe._id">
+          <strong>{{ probe.label }}</strong>
+          <code>{{ probe.requestId.slice(0, 8) }}</code>
+        </li>
+      </ol>
+      <p v-else class="pagination-copy">Record a few events to open the window.</p>
+      <button
+        type="button"
+        :disabled="paginatedProbes.state.status !== 'ready'"
+        @click="paginatedProbes.loadMore(3)"
+      >
+        {{ paginatedProbes.state.status === 'loadingMore' ? 'Loading…' : 'Load three more' }}
+      </button>
     </section>
 
     <footer>

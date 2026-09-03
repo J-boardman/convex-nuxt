@@ -1,3 +1,7 @@
+import {
+  paginationOptsValidator,
+  paginationResultValidator,
+} from 'convex/server'
 import { v } from 'convex/values'
 import { action, mutation, query } from './_generated/server'
 
@@ -34,6 +38,21 @@ export const list = query({
       .take(25)
 
     return probes.reverse()
+  },
+})
+
+export const paginated = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    surface: playgroundSurface,
+  },
+  returns: paginationResultValidator(probe),
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query('probes')
+      .withIndex('by_surface', q => q.eq('surface', args.surface))
+      .order('desc')
+      .paginate(args.paginationOpts)
   },
 })
 

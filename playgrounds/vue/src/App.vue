@@ -7,6 +7,7 @@ import {
   useConvexClient,
   useConvexConnectionState,
   useConvexMutation,
+  useConvexPaginatedQuery,
   useConvexQuery,
 } from '@j-boardman/convex-vue'
 import { computed } from 'vue'
@@ -22,6 +23,11 @@ const auth = useConvexAuth()
 const deployment = import.meta.env.VITE_CONVEX_URL
 const connection = useConvexConnectionState()
 const probes = useConvexQuery(api.probes.list, { surface: 'vue' })
+const paginatedProbes = useConvexPaginatedQuery(
+  api.probes.paginated,
+  { surface: 'vue' },
+  { initialNumItems: 3 },
+)
 const record = useConvexMutation(api.probes.record)
 const roundTrip = useConvexAction(api.probes.roundTrip)
 const {
@@ -205,6 +211,36 @@ const probeCount = computed(() => probes.data?.length ?? 0)
           <small>{{ mutationState }}</small>
         </li>
       </ol>
+    </section>
+
+    <section class="signal-panel pagination-panel" aria-labelledby="pagination-title">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Reactive pagination</p>
+          <h2 id="pagination-title">Incremental event window</h2>
+        </div>
+        <p class="panel-note">{{ paginatedProbes.results.length }} loaded</p>
+      </div>
+
+      <div class="pagination-body">
+        <ol v-if="paginatedProbes.results.length" class="page-items">
+          <li v-for="probe in paginatedProbes.results" :key="probe._id">
+            <strong>{{ probe.label }}</strong>
+            <code>{{ probe.requestId.slice(0, 8) }}</code>
+          </li>
+        </ol>
+        <p v-else class="empty-page">Record a few events to open the window.</p>
+        <button
+          type="button"
+          :disabled="paginatedProbes.state.status !== 'ready'"
+          @click="paginatedProbes.loadMore(3)"
+        >
+          {{ paginatedProbes.state.status === 'loadingMore' ? 'Loading…' : 'Load three more' }}
+        </button>
+        <span class="pagination-state" :data-state="paginatedProbes.state.status">
+          {{ paginatedProbes.state.status }}
+        </span>
+      </div>
     </section>
 
     <footer>

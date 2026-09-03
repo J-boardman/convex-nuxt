@@ -50,6 +50,33 @@ describe('shared playground probes', () => {
     expect(probes.at(-1)?.label).toBe('Vue event 26')
   })
 
+  it('paginates each surface without gaps or repeated events', async () => {
+    const t = convexTest(schema, modules)
+
+    for (let index = 0; index < 7; index += 1) {
+      await t.mutation(api.probes.record, {
+        label: `Nuxt page event ${index}`,
+        requestId: `page-${index}`,
+        surface: 'nuxt',
+      })
+    }
+
+    const first = await t.query(api.probes.paginated, {
+      paginationOpts: { cursor: null, numItems: 3 },
+      surface: 'nuxt',
+    })
+    const second = await t.query(api.probes.paginated, {
+      paginationOpts: { cursor: first.continueCursor, numItems: 4 },
+      surface: 'nuxt',
+    })
+
+    expect(first.page).toHaveLength(3)
+    expect(first.isDone).toBe(false)
+    expect(second.page).toHaveLength(4)
+    expect(second.isDone).toBe(true)
+    expect(new Set([...first.page, ...second.page].map(probe => probe._id)).size).toBe(7)
+  })
+
   it('treats a retried mutation as the same event', async () => {
     const t = convexTest(schema, modules)
     const args = {

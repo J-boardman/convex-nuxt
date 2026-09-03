@@ -371,6 +371,72 @@ dd {
   margin-top: 20px;
 }
 
+.pagination-panel {
+  margin-top: 20px;
+}
+
+.pagination-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 18px;
+  align-items: center;
+  padding: 24px;
+}
+
+.page-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.page-items li {
+  display: grid;
+  gap: 3px;
+  min-width: 150px;
+  padding: 10px 12px;
+  border: 1px solid rgba(16, 47, 50, 0.28);
+  background: #e7efeb;
+}
+
+.page-items strong {
+  font-size: 0.78rem;
+}
+
+.page-items code,
+.pagination-state {
+  color: #5b7777;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 0.64rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pagination-body button {
+  padding: 10px 13px;
+  border: 1px solid #102f32;
+  background: #102f32;
+  color: #edf5f1;
+  cursor: pointer;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.pagination-body button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.empty-page {
+  margin: 0;
+  color: #5b7777;
+  font-size: 0.82rem;
+}
+
 .panel-heading {
   display: flex;
   align-items: end;
@@ -588,6 +654,10 @@ footer {
   .signal-rail {
     grid-template-columns: 1fr 1fr;
     gap: 32px 16px;
+  }
+
+  .pagination-body {
+    grid-template-columns: 1fr;
   }
 
   .signal-rail::before {

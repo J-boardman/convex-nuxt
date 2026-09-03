@@ -184,6 +184,70 @@ dd {
   background: rgba(250, 251, 255, 0.9);
 }
 
+.pagination-panel {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.55fr) minmax(0, 1.45fr) auto;
+  gap: 24px;
+  align-items: center;
+  margin-top: 20px;
+  padding: 24px;
+  border: 1px solid #13233f;
+  background: rgba(250, 251, 255, 0.9);
+}
+
+.pagination-copy {
+  margin: 10px 0 0;
+  color: #68748a;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 0.68rem;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.page-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.page-items li {
+  display: grid;
+  gap: 3px;
+  min-width: 142px;
+  padding: 10px 12px;
+  border: 1px solid rgba(19, 35, 63, 0.24);
+  background: #eef2f9;
+}
+
+.page-items strong {
+  font-size: 0.78rem;
+}
+
+.page-items code {
+  color: #68748a;
+  font-size: 0.64rem;
+}
+
+.pagination-panel button {
+  padding: 11px 14px;
+  border: 1px solid #315cbb;
+  background: #315cbb;
+  color: #fff;
+  cursor: pointer;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 0.68rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.pagination-panel button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
 .trace-panel {
   min-height: 470px;
 }
@@ -474,7 +538,8 @@ footer {
 @media (max-width: 820px) {
   .hero,
   .trace-grid,
-  .boundary-rail {
+  .boundary-rail,
+  .pagination-panel {
     grid-template-columns: 1fr;
   }
 

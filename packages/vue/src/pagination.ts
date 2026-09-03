@@ -164,6 +164,18 @@ export function useConvexPaginatedQuery<
   const initialKey = initialNormalized.skipped
     ? undefined
     : initialNormalized.key
+  if (
+    options.server === true
+    && !runtime.client
+    && !bridge
+    && options.initialData === undefined
+    && !initialNormalized.skipped
+  ) {
+    throw new Error(
+      'useConvexPaginatedQuery() cannot server-render without a Convex SSR adapter or initialData. '
+      + 'Install a framework adapter, pass initialData, or set server to false.',
+    )
+  }
   const seed = bridge?.useQuerySeed<PaginationResult<Item>>({
     args: initialNormalized.skipped
       ? {}

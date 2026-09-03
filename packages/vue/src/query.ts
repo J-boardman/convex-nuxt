@@ -123,6 +123,18 @@ export function useConvexQuery<Query extends FunctionReference<'query'>>(
   const initialKey = initialNormalized.skipped
     ? undefined
     : initialNormalized.key
+  if (
+    options.server === true
+    && !runtime.client
+    && !bridge
+    && options.initialData === undefined
+    && !initialNormalized.skipped
+  ) {
+    throw new Error(
+      'useConvexQuery() cannot server-render without a Convex SSR adapter or initialData. '
+      + 'Install a framework adapter, pass initialData, or set server to false.',
+    )
+  }
   const seed = bridge?.useQuerySeed<QueryResult>({
     args: initialNormalized.skipped ? {} : initialNormalized.args,
     enabled: options.server !== false

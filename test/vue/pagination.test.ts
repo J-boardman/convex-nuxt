@@ -310,4 +310,34 @@ describe('useConvexPaginatedQuery', () => {
       results: [{ body: 'live', id: 2 }],
     })
   })
+
+  it('rejects explicit paginated SSR without a hydration strategy', () => {
+    const app = createSSRApp({})
+    app.use(createConvexVuePlugin({
+      createClient: vi.fn(),
+      isBrowser: () => false,
+    }), { url: 'https://one.convex.cloud' })
+    const scope = effectScope()
+
+    expect(() => app.runWithContext(() => scope.run(() =>
+      useConvexPaginatedQuery(
+        messagesQuery,
+        { channel: 'general' },
+        { initialNumItems: 3, server: true },
+      ),
+    ))).toThrow('without a Convex SSR adapter or initialData')
+
+    const initialData: PaginationResult<Message> = {
+      continueCursor: 'done',
+      isDone: true,
+      page: [],
+    }
+    expect(() => app.runWithContext(() => scope.run(() =>
+      useConvexPaginatedQuery(
+        messagesQuery,
+        { channel: 'general' },
+        { initialData, initialNumItems: 3, server: true },
+      ),
+    ))).not.toThrow()
+  })
 })

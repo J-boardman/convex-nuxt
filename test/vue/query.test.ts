@@ -224,6 +224,31 @@ describe('useConvexQuery', () => {
     expect(result?.state).toEqual({ status: 'success', data: ['server'] })
   })
 
+  it('rejects explicit SSR without an adapter or manual seed', () => {
+    const app = createSSRApp({})
+    app.use(createConvexVuePlugin({
+      createClient: vi.fn(),
+      isBrowser: () => false,
+    }), { url: 'https://one.convex.cloud' })
+    const scope = effectScope()
+
+    expect(() => app.runWithContext(() => scope.run(() =>
+      useConvexQuery(
+        messagesQuery,
+        { channel: 'general' },
+        { server: true },
+      ),
+    ))).toThrow('without a Convex SSR adapter or initialData')
+
+    expect(() => app.runWithContext(() => scope.run(() =>
+      useConvexQuery(
+        messagesQuery,
+        { channel: 'general' },
+        { server: false },
+      ),
+    ))).not.toThrow()
+  })
+
   it('preserves an adapter seed until the first live value arrives', () => {
     const harness = createHarness()
     const data = ref<string[] | undefined>(['server'])

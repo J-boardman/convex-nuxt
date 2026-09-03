@@ -33,4 +33,13 @@ describe.each(packageManifestPaths)('%s', (manifestPath) => {
       await expect(import(pathToFileURL(importPath).href)).resolves.toBeDefined()
     }
   })
+
+  it('ships package-specific installation and support guidance', async () => {
+    const packageDirectory = dirname(manifestPath)
+    const readme = await readFile(resolve(packageDirectory, 'README.md'), 'utf8')
+
+    expect(readme).toContain('## Install')
+    expect(readme).toMatch(/Plain Vue|regular\s+Vue/)
+    expect(readme).toContain('@j-boardman/convex-')
+  })
 })

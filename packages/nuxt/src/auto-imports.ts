@@ -13,5 +13,6 @@ export const convexAutoImports: readonly ConvexAutoImport[] = [
   { from: runtimeEntry, name: 'useConvexClient' },
   { from: runtimeEntry, name: 'useConvexConnectionState' },
   { from: runtimeEntry, name: 'useConvexMutation' },
+  { from: runtimeEntry, name: 'useConvexPaginatedQuery' },
   { from: runtimeEntry, name: 'useConvexQuery' },
 ]

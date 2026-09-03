@@ -12,6 +12,7 @@ describe('Nuxt Convex auto-imports', () => {
       'useConvexClient',
       'useConvexConnectionState',
       'useConvexMutation',
+      'useConvexPaginatedQuery',
       'useConvexQuery',
     ])
     expect(convexAutoImports.every(

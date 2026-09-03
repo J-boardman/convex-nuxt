@@ -2,6 +2,7 @@
 import { api } from '@j-boardman/convex-playground-backend/api'
 import {
   useConvexAction,
+  useConvexAuth,
   useConvexClient,
   useConvexConnectionState,
   useConvexMutation,
@@ -17,6 +18,7 @@ defineProps<{
 }>()
 
 const probes = useConvexQuery(api.probes.list, { surface: 'nuxt' })
+const auth = useConvexAuth()
 const client = import.meta.client ? useConvexClient() : undefined
 const connection = import.meta.client ? useConvexConnectionState() : undefined
 const record: RecordNuxtProbe = import.meta.client
@@ -58,6 +60,7 @@ const connectionCount = computed(() => connection?.value.connectionCount ?? 0)
           <div><dt>Owner</dt><dd>Nuxt application</dd></div>
           <div><dt>Deployment</dt><dd>{{ deploymentUrl }}</dd></div>
           <div><dt>Closed</dt><dd>{{ clientClosed ? 'yes' : 'no' }}</dd></div>
+          <div><dt>Auth</dt><dd>{{ auth.state.status }}</dd></div>
           <div>
             <dt>Socket</dt>
             <dd>{{ socketConnected ? 'connected' : 'connecting' }}</dd>

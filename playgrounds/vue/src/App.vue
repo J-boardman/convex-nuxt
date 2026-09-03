@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { api } from '@j-boardman/convex-playground-backend/api'
 import {
+  setupConvexAuth,
+  useConvexAuth,
   useConvexAction,
   useConvexClient,
   useConvexConnectionState,
@@ -11,6 +13,12 @@ import { computed } from 'vue'
 import { useProbeOperations } from './useProbeOperations'
 
 const client = useConvexClient()
+setupConvexAuth(() => ({
+  fetchAccessToken: async () => null,
+  isAuthenticated: false,
+  isLoading: false,
+}))
+const auth = useConvexAuth()
 const deployment = import.meta.env.VITE_CONVEX_URL
 const connection = useConvexConnectionState()
 const probes = useConvexQuery(api.probes.list, { surface: 'vue' })
@@ -68,6 +76,10 @@ const probeCount = computed(() => probes.data?.length ?? 0)
           <div>
             <dt>Closed</dt>
             <dd>{{ client.closed ? 'yes' : 'no' }}</dd>
+          </div>
+          <div>
+            <dt>Auth</dt>
+            <dd>{{ auth.state.status }}</dd>
           </div>
           <div>
             <dt>Socket</dt>

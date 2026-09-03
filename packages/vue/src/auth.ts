@@ -4,6 +4,7 @@ import {
   shallowRef,
   watch,
 } from 'vue'
+import { useConvexSsrBridge } from './adapter/ssr.js'
 import { useConvexRuntime } from './plugin.js'
 
 export type ConvexAuthState =
@@ -22,6 +23,7 @@ export interface ConvexAuthProvider {
 
 export interface SetupConvexAuthOptions {
   initialState?: { isAuthenticated: boolean }
+  serverToken?: () => Promise<string | null>
 }
 
 export interface UseConvexAuthResult {
@@ -49,15 +51,35 @@ export function setupConvexAuth(
     throw new Error('Convex authentication is already configured for this application.')
   }
 
-  const initialState: ConvexAuthState = options.initialState
-    ? options.initialState.isAuthenticated
+  const authSeed = useConvexSsrBridge()?.useAuthSeed?.({
+    serverToken: options.serverToken,
+  })
+  const initialAuth = options.initialState ?? authSeed?.initialState.value
+  const initialState: ConvexAuthState = initialAuth
+    ? initialAuth.isAuthenticated
       ? { status: 'authenticated' }
       : { status: 'unauthenticated' }
     : { status: 'loading' }
   const state = shallowRef<ConvexAuthState>(initialState)
   let generation = 0
   let providerHasSettled = false
+  let hasAuthSeed = Boolean(initialAuth)
   let stopped = false
+
+  const stopSeedWatch = authSeed
+    ? watch(
+        authSeed.initialState,
+        (seed) => {
+          if (!stopped && !providerHasSettled && seed) {
+            hasAuthSeed = true
+            state.value = seed.isAuthenticated
+              ? { status: 'authenticated' }
+              : { status: 'unauthenticated' }
+          }
+        },
+        { flush: 'sync' },
+      )
+    : undefined
 
   const stopWatching = watch(
     provider,
@@ -67,9 +89,13 @@ export function setupConvexAuth(
       const authGeneration = generation
 
       if (snapshot.isLoading) {
-        if (providerHasSettled || !options.initialState) {
+        if (providerHasSettled || !hasAuthSeed) {
           state.value = { status: 'loading' }
         }
+        return
+      }
+
+      if (!runtime.client && authSeed) {
         return
       }
 
@@ -123,6 +149,7 @@ export function setupConvexAuth(
       stopped = true
       generation += 1
       stopWatching()
+      stopSeedWatch?.()
       if (runtime.client && !runtime.client.closed) {
         runtime.client.setAuth(async () => null, () => {})
       }

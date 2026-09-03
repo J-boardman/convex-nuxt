@@ -7,7 +7,9 @@ export interface ConvexAutoImport {
 
 export const convexAutoImports: readonly ConvexAutoImport[] = [
   { from: runtimeEntry, name: 'closeConvex' },
+  { from: runtimeEntry, name: 'setupConvexAuth' },
   { from: runtimeEntry, name: 'useConvexAction' },
+  { from: runtimeEntry, name: 'useConvexAuth' },
   { from: runtimeEntry, name: 'useConvexClient' },
   { from: runtimeEntry, name: 'useConvexConnectionState' },
   { from: runtimeEntry, name: 'useConvexMutation' },

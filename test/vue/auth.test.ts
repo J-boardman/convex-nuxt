@@ -5,6 +5,7 @@ import {
   ref,
 } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
+import { installConvexSsrBridge } from '../../packages/vue/src/adapter/ssr'
 import type { ConvexAuthProvider } from '../../packages/vue/src/auth'
 import {
   setupConvexAuth,
@@ -120,6 +121,30 @@ describe('Convex authentication', () => {
     }
 
     expect(auth?.state).toEqual({ status: 'unauthenticated' })
+  })
+
+  it('adopts an asynchronous adapter seed while the provider is loading', () => {
+    const harness = createAuthHarness({
+      fetchAccessToken: vi.fn(async () => null),
+      isAuthenticated: false,
+      isLoading: true,
+    })
+    const initialState = ref<{ isAuthenticated: boolean }>()
+    installConvexSsrBridge(harness.app, {
+      name: 'test',
+      useAuthSeed: () => ({ initialState }),
+      useQuerySeed: vi.fn() as never,
+    })
+    const auth = installAuth(harness)
+
+    initialState.value = { isAuthenticated: true }
+    harness.provider.value = {
+      fetchAccessToken: vi.fn(async () => null),
+      isAuthenticated: false,
+      isLoading: true,
+    }
+
+    expect(auth?.state).toEqual({ status: 'authenticated' })
   })
 
   it('invalidates callbacks and clears auth when its scope stops', () => {

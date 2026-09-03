@@ -16,8 +16,19 @@ export interface ConvexQuerySeedRequest {
   readonly query: FunctionReference<'query'>
 }
 
+export interface ConvexAuthSeed {
+  readonly initialState: Readonly<Ref<{
+    isAuthenticated: boolean
+  } | undefined>>
+}
+
+export interface ConvexAuthSeedRequest {
+  readonly serverToken?: () => Promise<string | null>
+}
+
 export interface ConvexSsrBridge {
   readonly name: string
+  useAuthSeed?: (request: ConvexAuthSeedRequest) => ConvexAuthSeed
   useQuerySeed<ValueType>(
     request: ConvexQuerySeedRequest,
   ): ConvexQuerySeed<ValueType>

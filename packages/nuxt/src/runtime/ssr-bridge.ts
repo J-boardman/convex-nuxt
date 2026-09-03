@@ -2,6 +2,7 @@ import {
   installConvexSsrBridge,
 } from '@j-boardman/convex-vue/adapter'
 import type {
+  ConvexAuthSeedRequest,
   ConvexQuerySeedRequest,
   ConvexSsrSeed,
 } from '@j-boardman/convex-vue/adapter'
@@ -12,6 +13,12 @@ import type { App } from 'vue'
 import {
   createNuxtSsrBridge,
 } from './ssr-bridge-core.js'
+import { useNuxtAuthSeed } from './auth-seed-core.js'
+import type {
+  NuxtAuthAsyncData,
+  NuxtAuthSeedDependencies,
+  NuxtAuthSeedValue,
+} from './auth-seed-core.js'
 import type {
   NuxtAsyncDataSeed,
   NuxtSsrBridgeDependencies,
@@ -61,9 +68,58 @@ const nuxtBridgeDependencies: NuxtSsrBridgeDependencies = {
   useAsyncData: useQueryAsyncData,
 }
 
+function prepareServerToken(
+  request: ConvexAuthSeedRequest,
+): (() => Promise<string | null>) | undefined {
+  if (!import.meta.server) return undefined
+
+  const event = useRequestEvent()
+  if (!event) {
+    throw new Error('Convex auth seeds require an active Nuxt request.')
+  }
+  let tokenPromise: Promise<string | null> | undefined
+  const loadToken = (): Promise<string | null> => {
+    tokenPromise ??= request.serverToken?.() ?? Promise.resolve(null)
+    return tokenPromise
+  }
+  const context = event.context as typeof event.context & {
+    convex?: { token: () => Promise<string | null> }
+  }
+  context.convex = { token: loadToken }
+  return loadToken
+}
+
+function useAuthAsyncData(
+  key: string,
+  handler: () => Promise<NuxtAuthSeedValue>,
+  executeOnServer: boolean,
+): NuxtAuthAsyncData {
+  return useAsyncData(key, handler, {
+    deep: false,
+    immediate: executeOnServer,
+    server: true,
+  })
+}
+
+const nuxtAuthSeedDependencies: NuxtAuthSeedDependencies = {
+  prepareServerToken,
+  useAsyncData: useAuthAsyncData,
+}
+
 export function installNuxtSsrBridge(app: App, deploymentUrl: string): void {
+  const queryBridge = createNuxtSsrBridge(
+    deploymentUrl,
+    nuxtBridgeDependencies,
+  )
   installConvexSsrBridge(
     app,
-    createNuxtSsrBridge(deploymentUrl, nuxtBridgeDependencies),
+    {
+      ...queryBridge,
+      useAuthSeed: request => useNuxtAuthSeed(
+        deploymentUrl,
+        request,
+        nuxtAuthSeedDependencies,
+      ),
+    },
   )
 }

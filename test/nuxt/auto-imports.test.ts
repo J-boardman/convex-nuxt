@@ -6,7 +6,9 @@ describe('Nuxt Convex auto-imports', () => {
   it('resolve every generated name to the shared Vue runtime', () => {
     expect(convexAutoImports.map(entry => entry.name)).toEqual([
       'closeConvex',
+      'setupConvexAuth',
       'useConvexAction',
+      'useConvexAuth',
       'useConvexClient',
       'useConvexConnectionState',
       'useConvexMutation',

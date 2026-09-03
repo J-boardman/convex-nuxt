@@ -137,11 +137,20 @@ The first versions are published manually with npm account 2FA because npm
 trusted publishing can only be configured for packages that already exist.
 After that bootstrap:
 
-1. configure each package to trust the repository's release workflow;
-2. publish from a GitHub-hosted runner using npm OIDC;
-3. protect the `release` GitHub environment;
-4. disallow long-lived publication tokens; and
-5. retain npm provenance for the public repository and packages.
+1. create a protected GitHub environment named `release` and require a
+   maintainer's approval;
+2. configure each npm package to trust `.github/workflows/release.yml` in this
+   repository, using the `release` environment;
+3. enable GitHub Actions to create pull requests in the repository settings;
+4. publish from the GitHub-hosted runner using npm OIDC;
+5. disallow long-lived publication tokens; and
+6. retain npm provenance for the public repository and packages.
+
+The workflow deliberately gives different jobs different permissions. Mode
+selection can only read the repository, versioning can write the release pull
+request but cannot request an npm identity token, and publication receives an
+OIDC token only after the protected `release` environment is approved. No
+`NPM_TOKEN` secret is used.
 
 Merging ordinary changesets to `main` opens or updates a version pull request.
 Merging that version pull request verifies the repository again, publishes both

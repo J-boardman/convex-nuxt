@@ -51,6 +51,7 @@ describe('workspace development scripts', () => {
 
     expect(root.scripts.changeset).toBe('changeset')
     expect(root.scripts['version-packages']).toBe('changeset version')
+    expect(root.scripts.release).toBe('pnpm verify && changeset publish')
     expect(root.devDependencies?.['@changesets/cli']).toBe('3.0.1')
     expect(config.access).toBe('public')
     expect(config.fixed).toEqual([[

@@ -63,6 +63,7 @@ async function verifyArchive(packageRoot, archive, extractionRoot) {
 
   assert.equal(manifest.license, 'Apache-2.0')
   assert.equal(manifest.publishConfig?.access, 'public')
+  assert.equal(manifest.publishConfig?.provenance, true)
   assert.ok(manifest.files?.includes('dist'))
   assert.ok(!serializedManifest.includes('workspace:'))
 

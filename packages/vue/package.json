@@ -45,7 +45,8 @@
     "url": "https://github.com/j-boardman/convex-nuxt/issues"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": true
   },
   "scripts": {
     "build": "tsdown",

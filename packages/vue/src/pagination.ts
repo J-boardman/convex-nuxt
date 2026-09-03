@@ -399,9 +399,13 @@ export function useConvexPaginatedQuery<
           `loadMore() requires a positive integer. Received ${numItems}.`,
         )
       }
-      if (state.value.status === 'pending' || state.value.status === 'stale') {
+      if (
+        state.value.status === 'pending'
+        || state.value.status === 'stale'
+        || (state.value.status === 'ready' && !liveLoadMore)
+      ) {
         queuedLoadMore = numItems
-        return false
+        return true
       }
       if (state.value.status !== 'ready' || !liveLoadMore) return false
       const accepted = liveLoadMore(numItems)

@@ -159,7 +159,7 @@ describe('useConvexPaginatedQuery', () => {
     )
     const loadMore = vi.fn<(numItems: number) => boolean>(() => true)
 
-    expect(result.loadMore(7)).toBe(false)
+    expect(result.loadMore(7)).toBe(true)
     harness.subscriptions[0]?.update(
       clientResult('CanLoadMore', [{ body: 'first', id: 1 }], loadMore),
     )
@@ -295,6 +295,19 @@ describe('useConvexPaginatedQuery', () => {
       },
       enabled: true,
     }))
+
+    const loadMore = vi.fn<(numItems: number) => boolean>(() => true)
+    expect(result.loadMore(4)).toBe(true)
+    expect(loadMore).not.toHaveBeenCalled()
+
+    harness.subscriptions[0]?.update(
+      clientResult('CanLoadMore', serverPage.page, loadMore),
+    )
+    expect(loadMore).toHaveBeenCalledWith(4)
+    expect(result.state).toEqual({
+      status: 'loadingMore',
+      results: serverPage.page,
+    })
 
     harness.subscriptions[0]?.update(
       clientResult('Exhausted', [{ body: 'live', id: 2 }]),

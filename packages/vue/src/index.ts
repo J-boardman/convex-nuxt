@@ -27,6 +27,15 @@ export type {
   UseConvexQueryOptions,
   UseConvexQueryResult,
 } from './query.js'
+export { useConvexPaginatedQuery } from './pagination.js'
+export type {
+  ConvexPaginatedQueryArgs,
+  ConvexPaginatedQueryItem,
+  ConvexPaginatedQueryReference,
+  ConvexPaginatedQueryState,
+  UseConvexPaginatedQueryOptions,
+  UseConvexPaginatedQueryResult,
+} from './pagination.js'
 export {
   useConvexAction,
   useConvexMutation,

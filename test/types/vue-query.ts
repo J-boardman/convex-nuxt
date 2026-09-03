@@ -1,12 +1,18 @@
-import type { FunctionReference } from 'convex/server'
+import type {
+  FunctionReference,
+  PaginationOptions,
+  PaginationResult,
+} from 'convex/server'
 import { expectTypeOf } from 'vitest'
 import {
   setupConvexAuth,
   useConvexAuth,
+  useConvexPaginatedQuery,
   useConvexQuery,
 } from '@j-boardman/convex-vue'
 import type {
   ConvexAuthState,
+  ConvexPaginatedQueryState,
   ConvexQueryState,
 } from '@j-boardman/convex-vue'
 
@@ -22,6 +28,12 @@ declare const viewerQuery: FunctionReference<
   Record<string, never>,
   { name: string } | null
 >
+declare const paginatedMessagesQuery: FunctionReference<
+  'query',
+  'public',
+  { channel: string, paginationOpts: PaginationOptions },
+  PaginationResult<{ body: string }>
+>
 
 const messages = useConvexQuery(messagesQuery, { channel: 'general' })
 expectTypeOf(messages.data).toEqualTypeOf<string[] | undefined>()
@@ -35,6 +47,17 @@ useConvexQuery(
 )
 useConvexQuery(viewerQuery)
 useConvexQuery(viewerQuery, 'skip')
+
+const paginatedMessages = useConvexPaginatedQuery(
+  paginatedMessagesQuery,
+  { channel: 'general' },
+  { initialNumItems: 10 },
+)
+expectTypeOf(paginatedMessages.results).toEqualTypeOf<{ body: string }[]>()
+expectTypeOf(paginatedMessages.state).toEqualTypeOf<
+  ConvexPaginatedQueryState<{ body: string }>
+>()
+useConvexPaginatedQuery(paginatedMessagesQuery, 'skip', { initialNumItems: 10 })
 
 setupConvexAuth(() => ({
   fetchAccessToken: async ({ forceRefreshToken }) =>
@@ -50,3 +73,13 @@ useConvexQuery(messagesQuery)
 useConvexQuery(messagesQuery, { channel: 42 })
 // @ts-expect-error only generated query references are accepted
 useConvexQuery('messages:list', { channel: 'general' })
+useConvexPaginatedQuery(
+  paginatedMessagesQuery,
+  // @ts-expect-error paginationOpts is managed by the composable
+  { channel: 'general', paginationOpts: { cursor: null, numItems: 10 } },
+  { initialNumItems: 10 },
+)
+// @ts-expect-error required paginated query arguments cannot be omitted
+useConvexPaginatedQuery(paginatedMessagesQuery, 'not-an-args-object', {
+  initialNumItems: 10,
+})

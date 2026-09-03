@@ -9,7 +9,12 @@
   },
   "packageManager": "pnpm@11.18.0",
   "scripts": {
-    "build": "pnpm --recursive --if-present run build",
+    "build": "pnpm --filter @j-boardman/convex-vue run build && pnpm --filter @j-boardman/convex-nuxt run build",
+    "dev": "pnpm run dev:prepare && pnpm --parallel --stream --filter @j-boardman/convex-playground-backend --filter @j-boardman/convex-vue-playground --filter @j-boardman/convex-nuxt-playground run dev",
+    "dev:backend": "pnpm --filter @j-boardman/convex-playground-backend run dev",
+    "dev:nuxt": "pnpm --filter @j-boardman/convex-nuxt-playground run dev",
+    "dev:prepare": "pnpm --filter @j-boardman/convex-vue run build && pnpm --filter @j-boardman/convex-nuxt exec nuxt-module-build prepare && pnpm --filter @j-boardman/convex-playground-backend run codegen",
+    "dev:vue": "pnpm --filter @j-boardman/convex-vue-playground run dev",
     "lint": "eslint .",
     "prepare": "git config core.hooksPath .githooks",
     "test": "pnpm run build && vitest run",

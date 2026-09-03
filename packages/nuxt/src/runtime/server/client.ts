@@ -7,11 +7,11 @@ import { createConvexHttpClientForRequest } from './request.js'
 
 export {
   setConvexServerToken,
-} from './request.js'
+} from './request'
 export type {
   ConvexServerRequestContext,
   ConvexServerToken,
-} from './request.js'
+} from './request'
 
 export interface UseConvexHttpClientOptions {
   clientOptions?: ConvexHttpClientOptions

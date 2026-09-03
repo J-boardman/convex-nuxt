@@ -58,4 +58,12 @@ describe('workspace development scripts', () => {
       '@j-boardman/convex-nuxt',
     ]])
   })
+
+  it('verifies the packages in the form npm consumers receive', async () => {
+    const root = await readManifest('package.json')
+
+    expect(root.scripts['test:package']).toContain('verify-packages.mjs')
+    expect(root.devDependencies?.publint).toBe('0.3.24')
+    expect(root.devDependencies?.['@arethetypeswrong/cli']).toBe('0.18.5')
+  })
 })

@@ -33,7 +33,8 @@
     "@j-boardman/convex-vue": "workspace:*",
     "@nuxt/kit": "4.5.2",
     "@nuxt/schema": "4.5.2",
-    "defu": "6.1.7"
+    "defu": "6.1.7",
+    "h3": "1.15.11"
   },
   "peerDependencies": {
     "convex": "^1.45.0",

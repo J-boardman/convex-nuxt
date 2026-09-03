@@ -47,6 +47,9 @@ importers:
       defu:
         specifier: 6.1.7
         version: 6.1.7
+      h3:
+        specifier: 1.15.11
+        version: 1.15.11
     devDependencies:
       '@nuxt/module-builder':
         specifier: 1.0.3

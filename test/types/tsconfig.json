@@ -11,6 +11,9 @@
       ],
       "@j-boardman/convex-vue/server": [
         "packages/vue/src/server/index.ts"
+      ],
+      "@j-boardman/convex-nuxt/server": [
+        "packages/nuxt/src/runtime/server/index.ts"
       ]
     }
   },

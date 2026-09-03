@@ -21,7 +21,11 @@ expectTypeOf(messages.data).toEqualTypeOf<string[] | undefined>()
 expectTypeOf(messages.state).toEqualTypeOf<ConvexQueryState<string[]>>()
 
 useConvexQuery(messagesQuery, 'skip')
-useConvexQuery(messagesQuery, () => ({ channel: 'general' }))
+useConvexQuery(
+  messagesQuery,
+  () => ({ channel: 'general' }),
+  { server: true },
+)
 useConvexQuery(viewerQuery)
 useConvexQuery(viewerQuery, 'skip')
 

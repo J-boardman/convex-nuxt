@@ -3,6 +3,7 @@ import type {
   FunctionReference,
   FunctionReturnType,
 } from 'convex/server'
+import { getFunctionName } from 'convex/server'
 import { convexToJson, jsonToConvex } from 'convex/values'
 import type { Value } from 'convex/values'
 import {
@@ -13,6 +14,7 @@ import {
   watch,
 } from 'vue'
 import type { MaybeRefOrGetter } from 'vue'
+import { useConvexSsrBridge } from './adapter/ssr.js'
 import { useConvexRuntime } from './plugin.js'
 
 export type ConvexQuerySkip = 'skip'
@@ -29,6 +31,7 @@ export type ConvexQueryState<T> =
 export interface UseConvexQueryOptions<T> {
   initialData?: T
   keepPreviousData?: boolean
+  server?: boolean
 }
 
 export interface UseConvexQueryResult<T> {
@@ -107,12 +110,35 @@ export function useConvexQuery<Query extends FunctionReference<'query'>>(
 
   type QueryResult = FunctionReturnType<Query>
   const runtime = useConvexRuntime()
+  const bridge = useConvexSsrBridge()
+  let initialNormalized: NormalizedArgs | NormalizedSkip
+  try {
+    initialNormalized = normalizeArgs(
+      toValue(argsInput) as Record<string, Value> | ConvexQuerySkip,
+    )
+  }
+  catch {
+    initialNormalized = { skipped: true }
+  }
+  const initialKey = initialNormalized.skipped
+    ? undefined
+    : initialNormalized.key
+  const seed = bridge?.useQuerySeed<QueryResult>({
+    args: initialNormalized.skipped ? {} : initialNormalized.args,
+    enabled: options.server !== false
+      && options.initialData === undefined
+      && !initialNormalized.skipped,
+    key: `${getFunctionName(query)}:${initialKey ?? 'skip'}`,
+    query,
+  })
+  const initialData = options.initialData ?? seed?.data.value
   const state = shallowRef<ConvexQueryState<QueryResult>>({ status: 'pending' })
   const waiters = new Set<SuspenseWaiter<QueryResult>>()
   let currentKey: string | undefined
   let generation = 0
   let hasStarted = false
   let stopped = false
+  let seedActive = options.initialData === undefined
   let unsubscribe: (() => void) | undefined
 
   const publish = (nextState: ConvexQueryState<QueryResult>): void => {
@@ -142,6 +168,22 @@ export function useConvexQuery<Query extends FunctionReference<'query'>>(
     unsubscribe = undefined
   }
 
+  const stopSeedWatch = seed
+    ? watch(
+        [seed.data, seed.error, seed.pending],
+        ([data, error, pending]) => {
+          if (!seedActive || stopped) return
+          if (error) {
+            publish({ status: 'error', error })
+          }
+          else if (!pending && data !== undefined) {
+            publish({ status: 'success', data })
+          }
+        },
+        { immediate: true, flush: 'sync' },
+      )
+    : undefined
+
   const stopWatching = watch(
     () => toValue(argsInput),
     (input) => {
@@ -164,6 +206,7 @@ export function useConvexQuery<Query extends FunctionReference<'query'>>(
       }
 
       if (normalized.skipped) {
+        seedActive = false
         generation += 1
         currentKey = undefined
         stopSubscription()
@@ -177,13 +220,16 @@ export function useConvexQuery<Query extends FunctionReference<'query'>>(
       }
 
       const previousData = dataFromState(state.value)
+      if (normalized.key !== initialKey) {
+        seedActive = false
+      }
       generation += 1
       const subscriptionGeneration = generation
       currentKey = normalized.key
       stopSubscription()
 
-      if (!hasStarted && options.initialData !== undefined) {
-        publish({ status: 'success', data: options.initialData })
+      if (!hasStarted && initialData !== undefined) {
+        publish({ status: 'success', data: initialData })
       }
       else if (options.keepPreviousData && previousData !== undefined) {
         publish({ status: 'stale', data: previousData })
@@ -202,11 +248,13 @@ export function useConvexQuery<Query extends FunctionReference<'query'>>(
         normalized.args as FunctionArgs<Query>,
         (data) => {
           if (!stopped && subscriptionGeneration === generation) {
+            seedActive = false
             publish({ status: 'success', data })
           }
         },
         (error) => {
           if (!stopped && subscriptionGeneration === generation) {
+            seedActive = false
             publish({
               status: 'error',
               error,
@@ -225,6 +273,7 @@ export function useConvexQuery<Query extends FunctionReference<'query'>>(
     generation += 1
     stopSubscription()
     stopWatching()
+    stopSeedWatch?.()
     const cancellation = new Error('The Convex query was stopped.')
     for (const waiter of waiters) {
       waiter.reject(cancellation)

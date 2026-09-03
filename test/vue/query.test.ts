@@ -1,4 +1,5 @@
 import type { ConvexClient } from 'convex/browser'
+import { makeFunctionReference } from 'convex/server'
 import type { FunctionReference } from 'convex/server'
 import {
   createSSRApp,
@@ -8,6 +9,8 @@ import {
 } from 'vue'
 import type { App, EffectScope } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
+import { installConvexSsrBridge } from '../../packages/vue/src/adapter/ssr.js'
+import type { ConvexSsrBridge } from '../../packages/vue/src/adapter/ssr.js'
 import { createConvexVuePlugin } from '../../packages/vue/src/plugin.js'
 import { useConvexQuery } from '../../packages/vue/src/query.js'
 
@@ -219,6 +222,59 @@ describe('useConvexQuery', () => {
 
     expect(createClient).not.toHaveBeenCalled()
     expect(result?.state).toEqual({ status: 'success', data: ['server'] })
+  })
+
+  it('preserves an adapter seed until the first live value arrives', () => {
+    const harness = createHarness()
+    const data = ref<string[] | undefined>(['server'])
+    const error = ref<Error>()
+    const pending = ref(false)
+    const bridge: ConvexSsrBridge = {
+      name: 'test',
+      useQuerySeed: vi.fn(() => ({ data, error, pending })) as never,
+    }
+    installConvexSsrBridge(harness.app, bridge)
+    const query = makeFunctionReference<'query', { channel: string }, string[]>(
+      'messages:list',
+    )
+
+    const result = withinHarness(harness, () =>
+      useConvexQuery(query, { channel: 'general' }),
+    )
+
+    expect(result.state).toEqual({ status: 'success', data: ['server'] })
+    expect(harness.subscriptions).toHaveLength(1)
+
+    harness.subscriptions[0]?.update(['live'])
+    data.value = ['late server value']
+
+    expect(result.state).toEqual({ status: 'success', data: ['live'] })
+  })
+
+  it('discards an adapter seed when reactive arguments change', async () => {
+    const harness = createHarness()
+    const channel = ref('general')
+    const data = ref<string[] | undefined>(['server'])
+    const error = ref<Error>()
+    const pending = ref(false)
+    installConvexSsrBridge(harness.app, {
+      name: 'test',
+      useQuerySeed: (() => ({ data, error, pending })) as never,
+    })
+    const query = makeFunctionReference<'query', { channel: string }, string[]>(
+      'messages:list',
+    )
+    const result = withinHarness(harness, () =>
+      useConvexQuery(query, () => ({ channel: channel.value })),
+    )
+
+    channel.value = 'random'
+    await nextTick()
+    data.value = ['obsolete server value']
+
+    expect(result.state).toEqual({ status: 'pending' })
+    expect(harness.subscriptions[0]?.unsubscribe).toHaveBeenCalledOnce()
+    expect(harness.subscriptions[1]?.args).toEqual({ channel: 'random' })
   })
 
   it('settles suspense from success, error, and skip states', async () => {

@@ -1,4 +1,6 @@
 import { makeFunctionReference } from 'convex/server'
+import type { PaginationOptions, PaginationResult } from 'convex/server'
+import type { Value } from 'convex/values'
 import { ref } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
 import type {
@@ -18,7 +20,7 @@ interface SeedHarness {
 
 function createSeedHarness(
   payload: Map<string, ConvexSsrSeed>,
-  loadQuery: () => Promise<string[]>,
+  loadQuery: () => Promise<Value>,
 ): SeedHarness {
   const pendingTasks: Promise<void>[] = []
   const dependencies: NuxtSsrBridgeDependencies = {
@@ -108,5 +110,63 @@ describe('Nuxt SSR bridge', () => {
     expect(harness.dependencies.createQueryLoader).not.toHaveBeenCalled()
     expect(seed.pending.value).toBe(false)
     expect(harness.pendingTasks).toHaveLength(0)
+  })
+
+  it('reuses a serialized first page during pagination hydration', async () => {
+    interface Message {
+      body: string
+      sequence: bigint
+    }
+    const payload = new Map<string, ConvexSsrSeed>()
+    const firstPage: PaginationResult<Message> = {
+      continueCursor: 'next-page',
+      isDone: false,
+      page: [{ body: 'from the server', sequence: 1n }],
+    }
+    const serverLoad = vi.fn(async () => firstPage)
+    const serverHarness = createSeedHarness(payload, serverLoad)
+    const query = makeFunctionReference<
+      'query',
+      { channel: string, paginationOpts: PaginationOptions },
+      PaginationResult<Message>
+    >('messages:paginated')
+    const request = {
+      args: {
+        channel: 'general',
+        paginationOpts: { cursor: null, numItems: 5 },
+      },
+      enabled: true,
+      key: 'messages:paginated:pagination:5:general',
+      query,
+    }
+    const serverBridge = createNuxtSsrBridge(
+      'https://example.convex.cloud',
+      serverHarness.dependencies,
+    )
+    const serverSeed = serverBridge.useQuerySeed<PaginationResult<Message>>(
+      request,
+    )
+
+    await Promise.all(serverHarness.pendingTasks)
+
+    expect(serverLoad).toHaveBeenCalledOnce()
+    expect(serverSeed.data.value).toEqual(firstPage)
+
+    const browserLoad = vi.fn(async () => ({
+      ...firstPage,
+      page: [{ body: 'duplicate request', sequence: 2n }],
+    }))
+    const browserHarness = createSeedHarness(payload, browserLoad)
+    const browserBridge = createNuxtSsrBridge(
+      'https://example.convex.cloud',
+      browserHarness.dependencies,
+    )
+    const hydratedSeed = browserBridge.useQuerySeed<PaginationResult<Message>>(
+      request,
+    )
+
+    expect(hydratedSeed.data.value).toEqual(firstPage)
+    expect(browserLoad).not.toHaveBeenCalled()
+    expect(browserHarness.pendingTasks).toHaveLength(0)
   })
 })

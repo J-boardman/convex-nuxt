@@ -58,6 +58,11 @@ expectTypeOf(paginatedMessages.state).toEqualTypeOf<
   ConvexPaginatedQueryState<{ body: string }>
 >()
 useConvexPaginatedQuery(paginatedMessagesQuery, 'skip', { initialNumItems: 10 })
+useConvexPaginatedQuery(
+  paginatedMessagesQuery,
+  { channel: 'general' },
+  { initialNumItems: 10, server: false },
+)
 
 setupConvexAuth(() => ({
   fetchAccessToken: async ({ forceRefreshToken }) =>

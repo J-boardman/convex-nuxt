@@ -4,6 +4,7 @@ import type {
   PaginationOptions,
   PaginationResult,
 } from 'convex/server'
+import { makeFunctionReference } from 'convex/server'
 import {
   createSSRApp,
   effectScope,
@@ -12,6 +13,8 @@ import {
 } from 'vue'
 import type { App, EffectScope } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
+import { installConvexSsrBridge } from '../../packages/vue/src/adapter/ssr.js'
+import type { ConvexSsrBridge } from '../../packages/vue/src/adapter/ssr.js'
 import { useConvexPaginatedQuery } from '../../packages/vue/src/pagination.js'
 import { createConvexVuePlugin } from '../../packages/vue/src/plugin.js'
 
@@ -54,7 +57,11 @@ interface PaginationHarness {
   subscriptions: Subscription[]
 }
 
-const messagesQuery = {} as MessagesQuery
+const messagesQuery = makeFunctionReference<
+  'query',
+  { channel: string, paginationOpts: PaginationOptions },
+  PaginationResult<Message>
+>('messages:paginated')
 
 function createHarness(): PaginationHarness {
   const subscriptions: Subscription[] = []
@@ -250,5 +257,57 @@ describe('useConvexPaginatedQuery', () => {
       ),
     )).toThrow('positive integer')
     expect(harness.subscriptions).toHaveLength(0)
+  })
+
+  it('preserves an SSR page until the live subscription takes ownership', () => {
+    const harness = createHarness()
+    const serverPage = {
+      continueCursor: 'server-cursor',
+      isDone: false,
+      page: [{ body: 'server', id: 1 }],
+    }
+    const data = ref<PaginationResult<Message> | undefined>(serverPage)
+    const error = ref<Error>()
+    const pending = ref(false)
+    const bridge: ConvexSsrBridge = {
+      name: 'test',
+      useQuerySeed: vi.fn(() => ({ data, error, pending })) as never,
+    }
+    installConvexSsrBridge(harness.app, bridge)
+
+    const result = withinHarness(harness, () =>
+      useConvexPaginatedQuery(
+        messagesQuery,
+        { channel: 'general' },
+        { initialNumItems: 3 },
+      ),
+    )
+
+    expect(result.state).toEqual({
+      status: 'ready',
+      results: serverPage.page,
+      canLoadMore: true,
+    })
+    expect(bridge.useQuerySeed).toHaveBeenCalledWith(expect.objectContaining({
+      args: {
+        channel: 'general',
+        paginationOpts: { cursor: null, numItems: 3 },
+      },
+      enabled: true,
+    }))
+
+    harness.subscriptions[0]?.update(
+      clientResult('Exhausted', [{ body: 'live', id: 2 }]),
+    )
+    data.value = {
+      continueCursor: 'late',
+      isDone: true,
+      page: [{ body: 'obsolete', id: 3 }],
+    }
+
+    expect(result.state).toEqual({
+      status: 'exhausted',
+      results: [{ body: 'live', id: 2 }],
+    })
   })
 })

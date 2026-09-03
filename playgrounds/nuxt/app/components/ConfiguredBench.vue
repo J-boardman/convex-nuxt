@@ -7,18 +7,31 @@ import {
   useConvexMutation,
   useConvexQuery,
 } from '@j-boardman/convex-nuxt/runtime'
+import type {
+  RecordNuxtProbe,
+  RoundTripNuxtProbe,
+} from '../composables/useNuxtProbeOperations'
 
 defineProps<{
   deploymentUrl: string
 }>()
 
-const client = useConvexClient()
-const connection = useConvexConnectionState()
 const probes = useConvexQuery(api.probes.list, { surface: 'nuxt' })
-const record = useConvexMutation(api.probes.record)
-const roundTrip = useConvexAction(api.probes.roundTrip)
+const client = import.meta.client ? useConvexClient() : undefined
+const connection = import.meta.client ? useConvexConnectionState() : undefined
+const record: RecordNuxtProbe = import.meta.client
+  ? useConvexMutation(api.probes.record)
+  : async () => ({ created: false })
+const roundTrip: RoundTripNuxtProbe = import.meta.client
+  ? useConvexAction(api.probes.roundTrip)
+  : async args => ({ ...args, runtime: 'action' })
 const operations = useNuxtProbeOperations(record, roundTrip)
 const probeCount = computed(() => probes.data?.length ?? 0)
+const clientClosed = computed(() => client?.closed ?? false)
+const socketConnected = computed(() =>
+  connection?.value.isWebSocketConnected ?? false,
+)
+const connectionCount = computed(() => connection?.value.connectionCount ?? 0)
 </script>
 
 <template>
@@ -40,16 +53,16 @@ const probeCount = computed(() => probes.data?.length ?? 0)
 
       <aside class="runtime-card" aria-label="Active Nuxt runtime">
         <span class="pulse" aria-hidden="true" />
-        <p>Client hydrated</p>
+        <p>Runtime installed</p>
         <dl>
           <div><dt>Owner</dt><dd>Nuxt application</dd></div>
           <div><dt>Deployment</dt><dd>{{ deploymentUrl }}</dd></div>
-          <div><dt>Closed</dt><dd>{{ client.closed ? 'yes' : 'no' }}</dd></div>
+          <div><dt>Closed</dt><dd>{{ clientClosed ? 'yes' : 'no' }}</dd></div>
           <div>
             <dt>Socket</dt>
-            <dd>{{ connection.isWebSocketConnected ? 'connected' : 'connecting' }}</dd>
+            <dd>{{ socketConnected ? 'connected' : 'connecting' }}</dd>
           </div>
-          <div><dt>Reconnects</dt><dd>{{ connection.connectionCount }}</dd></div>
+          <div><dt>Reconnects</dt><dd>{{ connectionCount }}</dd></div>
         </dl>
       </aside>
     </section>
@@ -151,7 +164,7 @@ const probeCount = computed(() => probes.data?.length ?? 0)
         <li :class="{ complete: probes.state.status === 'success' }">
           <span>03</span><strong>Live query</strong><small>{{ probes.state.status }}</small>
         </li>
-        <li><span>04</span><strong>SSR seed</strong><small>next probe</small></li>
+        <li class="complete"><span>04</span><strong>SSR seed</strong><small>payload reused</small></li>
       </ol>
     </section>
 

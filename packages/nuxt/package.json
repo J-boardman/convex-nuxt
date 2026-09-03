@@ -34,7 +34,8 @@
     "@nuxt/kit": "4.5.2",
     "@nuxt/schema": "4.5.2",
     "defu": "6.1.7",
-    "h3": "1.15.11"
+    "h3": "1.15.11",
+    "ohash": "2.0.12"
   },
   "peerDependencies": {
     "convex": "^1.45.0",

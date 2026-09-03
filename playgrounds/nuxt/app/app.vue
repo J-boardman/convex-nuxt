@@ -5,14 +5,6 @@ const deploymentUrl = String(config.public.convexPlaygroundUrl)
 
 <template>
   <NuxtRouteAnnouncer />
-  <ClientOnly v-if="deploymentUrl">
-    <ConfiguredBench :deployment-url="deploymentUrl" />
-    <template #fallback>
-      <main class="shell loading-shell">
-        <p class="overline">Nuxt integration playground</p>
-        <h1>Hydrating the signal bench.</h1>
-      </main>
-    </template>
-  </ClientOnly>
+  <ConfiguredBench v-if="deploymentUrl" :deployment-url="deploymentUrl" />
   <SetupRequired v-else />
 </template>

@@ -50,6 +50,9 @@ importers:
       h3:
         specifier: 1.15.11
         version: 1.15.11
+      ohash:
+        specifier: 2.0.12
+        version: 2.0.12
     devDependencies:
       '@nuxt/module-builder':
         specifier: 1.0.3

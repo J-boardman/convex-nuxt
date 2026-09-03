@@ -255,6 +255,7 @@ export function useConvexQuery<Query extends FunctionReference<'query'>>(
         return
       }
 
+      runtime.querySubscriptionsStarted = true
       unsubscribe = runtime.client.onUpdate(
         query,
         normalized.args as FunctionArgs<Query>,

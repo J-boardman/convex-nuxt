@@ -50,6 +50,13 @@ export function setupConvexAuth(
   if (runtime.auth) {
     throw new Error('Convex authentication is already configured for this application.')
   }
+  if (runtime.querySubscriptionsStarted) {
+    throw new Error(
+      'Convex authentication must be configured before live query subscriptions start. '
+      + 'Call setupConvexAuth() in the root component before child queries, '
+      + 'or in a Nuxt plugin that depends on "convex".',
+    )
+  }
 
   const authSeed = useConvexSsrBridge()?.useAuthSeed?.({
     serverToken: options.serverToken,

@@ -248,6 +248,7 @@ export function useConvexPaginatedQuery<
 
   const subscribe = (normalized: NormalizedArgs): void => {
     if (!runtime.client || runtime.client.closed) return
+    runtime.querySubscriptionsStarted = true
     generation += 1
     const subscriptionGeneration = generation
     const client = runtime.client as ConvexClient & PaginatedClient

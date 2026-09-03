@@ -11,7 +11,10 @@ import type { App, EffectScope } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
 import { installConvexSsrBridge } from '../../packages/vue/src/adapter/ssr.js'
 import type { ConvexSsrBridge } from '../../packages/vue/src/adapter/ssr.js'
-import { createConvexVuePlugin } from '../../packages/vue/src/plugin.js'
+import {
+  createConvexVuePlugin,
+  useConvexRuntime,
+} from '../../packages/vue/src/plugin.js'
 import { useConvexQuery } from '../../packages/vue/src/query.js'
 
 type MessagesQuery = FunctionReference<
@@ -84,6 +87,8 @@ describe('useConvexQuery', () => {
 
     expect(result.state).toEqual({ status: 'pending' })
     expect(harness.subscriptions[0]?.args).toEqual({ channel: 'general' })
+    expect(withinHarness(harness, useConvexRuntime).querySubscriptionsStarted)
+      .toBe(true)
 
     harness.subscriptions[0]?.update(['hello'])
 

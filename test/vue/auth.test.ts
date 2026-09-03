@@ -11,7 +11,10 @@ import {
   setupConvexAuth,
   useConvexAuth,
 } from '../../packages/vue/src/auth'
-import { createConvexVuePlugin } from '../../packages/vue/src/plugin'
+import {
+  createConvexVuePlugin,
+  useConvexRuntime,
+} from '../../packages/vue/src/plugin'
 
 interface AuthRegistration {
   fetchToken: (args: { forceRefreshToken: boolean }) => Promise<string | null>
@@ -172,5 +175,21 @@ describe('Convex authentication', () => {
 
     expect(() => harness.app.runWithContext(() => useConvexAuth()))
       .toThrow('Call setupConvexAuth() before useConvexAuth().')
+  })
+
+  it('rejects auth setup after a live query has started', () => {
+    const harness = createAuthHarness({
+      fetchAccessToken: vi.fn(async () => 'token'),
+      isAuthenticated: true,
+      isLoading: false,
+    })
+    harness.app.runWithContext(() => {
+      useConvexRuntime().querySubscriptionsStarted = true
+    })
+
+    expect(() => installAuth(harness)).toThrow(
+      'before live query subscriptions start',
+    )
+    expect(harness.client.setAuth).not.toHaveBeenCalled()
   })
 })

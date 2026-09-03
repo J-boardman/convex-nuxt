@@ -19,6 +19,7 @@ export interface ConvexVueRuntime {
   auth?: ConvexAuthController
   client: ConvexClient | null
   close: () => Promise<void>
+  querySubscriptionsStarted: boolean
   url: string
 }
 
@@ -94,6 +95,7 @@ export function createConvexVuePlugin(
           })()
           return closePromise
         },
+        querySubscriptionsStarted: false,
         url: options.url,
       }
 

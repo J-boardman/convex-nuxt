@@ -1,0 +1,50 @@
+name: Package preview
+
+on:
+  pull_request_review:
+    types:
+      - submitted
+
+permissions: {}
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  authorize:
+    name: Authorize reviewer
+    if: github.event.review.state == 'approved'
+    runs-on: ubuntu-latest
+    outputs:
+      allowed: ${{ steps.permission.outputs.require-result }}
+    steps:
+      - name: Require repository write access
+        id: permission
+        uses: actions-cool/check-user-permission@v2
+        with:
+          require: write
+
+  publish:
+    name: Publish package preview
+    if: needs.authorize.outputs.allowed == 'true'
+    needs: authorize
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the approved revision
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install pnpm and Node.js
+        uses: pnpm/setup@v2
+        with:
+          cache: true
+          require-lockfile: true
+          runtime: node@24
+
+      - name: Verify repository
+        run: pnpm verify
+
+      - name: Publish both package previews
+        run: pnpm preview

@@ -50,9 +50,12 @@ describe('workspace development scripts', () => {
     ) as { access: string, fixed: string[][] }
 
     expect(root.scripts.changeset).toBe('changeset')
+    expect(root.scripts.preview).toContain("pkg-pr-new publish --pnpm")
+    expect(root.scripts.preview).toContain("'./packages/*'")
     expect(root.scripts['version-packages']).toBe('changeset version')
     expect(root.scripts.release).toBe('pnpm verify && changeset publish')
     expect(root.devDependencies?.['@changesets/cli']).toBe('3.0.1')
+    expect(root.devDependencies?.['pkg-pr-new']).toBe('0.0.86')
     expect(config.access).toBe('public')
     expect(config.fixed).toEqual([[
       '@j-boardman/convex-vue',

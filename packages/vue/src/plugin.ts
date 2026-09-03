@@ -2,6 +2,7 @@ import { ConvexClient } from 'convex/browser'
 import type { ConvexClientOptions } from 'convex/browser'
 import { inject } from 'vue'
 import type { App, InjectionKey, Plugin } from 'vue'
+import type { ConvexAuthController } from './auth.js'
 
 export type ConvexVueClientOptions = Pick<
   ConvexClientOptions,
@@ -15,6 +16,7 @@ export interface ConvexVueOptions {
 
 /** @internal */
 export interface ConvexVueRuntime {
+  auth?: ConvexAuthController
   client: ConvexClient | null
   close: () => Promise<void>
   url: string

@@ -1,7 +1,14 @@
 import type { FunctionReference } from 'convex/server'
 import { expectTypeOf } from 'vitest'
-import { useConvexQuery } from '@j-boardman/convex-vue'
-import type { ConvexQueryState } from '@j-boardman/convex-vue'
+import {
+  setupConvexAuth,
+  useConvexAuth,
+  useConvexQuery,
+} from '@j-boardman/convex-vue'
+import type {
+  ConvexAuthState,
+  ConvexQueryState,
+} from '@j-boardman/convex-vue'
 
 declare const messagesQuery: FunctionReference<
   'query',
@@ -28,6 +35,14 @@ useConvexQuery(
 )
 useConvexQuery(viewerQuery)
 useConvexQuery(viewerQuery, 'skip')
+
+setupConvexAuth(() => ({
+  fetchAccessToken: async ({ forceRefreshToken }) =>
+    forceRefreshToken ? 'fresh-token' : 'token',
+  isAuthenticated: true,
+  isLoading: false,
+}))
+expectTypeOf(useConvexAuth().state).toEqualTypeOf<ConvexAuthState>()
 
 // @ts-expect-error required query arguments cannot be omitted
 useConvexQuery(messagesQuery)

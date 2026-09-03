@@ -1,4 +1,14 @@
 export {
+  setupConvexAuth,
+  useConvexAuth,
+} from './auth.js'
+export type {
+  ConvexAuthProvider,
+  ConvexAuthState,
+  SetupConvexAuthOptions,
+  UseConvexAuthResult,
+} from './auth.js'
+export {
   closeConvex,
   convexVue,
   useConvexClient,

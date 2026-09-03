@@ -66,4 +66,15 @@ describe('workspace development scripts', () => {
     expect(root.devDependencies?.publint).toBe('0.3.24')
     expect(root.devDependencies?.['@arethetypeswrong/cli']).toBe('0.18.5')
   })
+
+  it('runs every deterministic gate through verify', async () => {
+    const root = await readManifest('package.json')
+
+    expect(root.scripts['test:unit']).toContain('vitest run')
+    expect(root.scripts['test:module']).toContain('test/nuxt')
+    expect(root.scripts.test).toContain('test:unit')
+    expect(root.scripts.test).toContain('test:module')
+    expect(root.scripts.test).toContain('test:package')
+    expect(root.scripts.verify).toBe('pnpm typecheck && pnpm lint && pnpm test')
+  })
 })

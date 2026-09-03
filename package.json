@@ -18,11 +18,14 @@
     "dev:vue": "pnpm --filter @j-boardman/convex-vue-playground run dev",
     "lint": "eslint .",
     "prepare": "git config core.hooksPath .githooks",
-    "test": "pnpm run build && vitest run",
+    "test": "pnpm run test:unit && pnpm run test:module && pnpm run test:package",
+    "test:module": "vitest run test/nuxt",
     "test:package": "node scripts/verify-packages.mjs",
+    "test:unit": "vitest run --exclude 'test/nuxt/**'",
     "typecheck": "pnpm run typecheck:packages && pnpm run test:types",
     "typecheck:packages": "pnpm --recursive --if-present run typecheck",
     "test:types": "tsc --project test/types/tsconfig.json --noEmit",
+    "verify": "pnpm typecheck && pnpm lint && pnpm test",
     "version-packages": "changeset version"
   },
   "devDependencies": {

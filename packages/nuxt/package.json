@@ -2,24 +2,46 @@
   "name": "@j-boardman/convex-nuxt",
   "version": "0.0.0",
   "description": "First-class Convex integration for Nuxt",
+  "keywords": [
+    "convex",
+    "nuxt",
+    "vue",
+    "realtime",
+    "ssr"
+  ],
   "license": "Apache-2.0",
   "type": "module",
+  "main": "./dist/module.mjs",
+  "module": "./dist/module.mjs",
+  "types": "./dist/types.d.mts",
   "files": [
     "dist"
   ],
   "exports": {
     ".": {
       "types": "./dist/types.d.mts",
-      "import": "./dist/module.mjs"
+      "import": "./dist/module.mjs",
+      "default": "./dist/module.mjs"
     },
     "./runtime": {
       "types": "./dist/runtime/index.d.ts",
-      "import": "./dist/runtime/index.js"
+      "import": "./dist/runtime/index.js",
+      "default": "./dist/runtime/index.js"
     },
     "./server": {
       "types": "./dist/runtime/server/index.d.ts",
-      "import": "./dist/runtime/server/index.js"
+      "import": "./dist/runtime/server/index.js",
+      "default": "./dist/runtime/server/index.js"
     }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/j-boardman/convex-nuxt.git",
+    "directory": "packages/nuxt"
+  },
+  "homepage": "https://github.com/j-boardman/convex-nuxt#readme",
+  "bugs": {
+    "url": "https://github.com/j-boardman/convex-nuxt/issues"
   },
   "publishConfig": {
     "access": "public"

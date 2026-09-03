@@ -2,8 +2,18 @@
   "name": "@j-boardman/convex-vue",
   "version": "0.0.0",
   "description": "First-class Convex integration for Vue 3",
+  "keywords": [
+    "convex",
+    "vue",
+    "vue3",
+    "realtime",
+    "composables"
+  ],
   "license": "Apache-2.0",
   "type": "module",
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "sideEffects": false,
   "files": [
     "dist"
@@ -11,16 +21,28 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
-      "import": "./dist/index.mjs"
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.mjs"
     },
     "./adapter": {
       "types": "./dist/adapter/index.d.mts",
-      "import": "./dist/adapter/index.mjs"
+      "import": "./dist/adapter/index.mjs",
+      "default": "./dist/adapter/index.mjs"
     },
     "./server": {
       "types": "./dist/server/index.d.mts",
-      "import": "./dist/server/index.mjs"
+      "import": "./dist/server/index.mjs",
+      "default": "./dist/server/index.mjs"
     }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/j-boardman/convex-nuxt.git",
+    "directory": "packages/vue"
+  },
+  "homepage": "https://github.com/j-boardman/convex-nuxt#readme",
+  "bugs": {
+    "url": "https://github.com/j-boardman/convex-nuxt/issues"
   },
   "publishConfig": {
     "access": "public"

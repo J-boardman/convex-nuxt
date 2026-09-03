@@ -9,8 +9,15 @@ interface PackageExport {
 }
 
 interface PackageManifest {
+  bugs: { url: string }
   exports: Record<string, PackageExport>
+  homepage: string
+  keywords: string[]
+  main: string
+  module: string
   name: string
+  repository: { directory: string, type: string, url: string }
+  types: string
 }
 
 const packageManifestPaths = [
@@ -41,5 +48,28 @@ describe.each(packageManifestPaths)('%s', (manifestPath) => {
     expect(readme).toContain('## Install')
     expect(readme).toMatch(/Plain Vue|regular\s+Vue/)
     expect(readme).toContain('@j-boardman/convex-')
+  })
+
+  it('identifies its code, documentation, issues, and primary entry', async () => {
+    const manifest = JSON.parse(
+      await readFile(manifestPath, 'utf8'),
+    ) as PackageManifest
+    const primaryExport = manifest.exports['.']
+
+    expect(manifest.repository).toMatchObject({
+      type: 'git',
+      url: 'git+https://github.com/j-boardman/convex-nuxt.git',
+    })
+    expect(manifest.repository.directory).toMatch(/^packages\/(vue|nuxt)$/)
+    expect(manifest.homepage).toBe(
+      'https://github.com/j-boardman/convex-nuxt#readme',
+    )
+    expect(manifest.bugs.url).toBe(
+      'https://github.com/j-boardman/convex-nuxt/issues',
+    )
+    expect(manifest.keywords).toContain('convex')
+    expect(manifest.main).toBe(primaryExport?.import)
+    expect(manifest.module).toBe(primaryExport?.import)
+    expect(manifest.types).toBe(primaryExport?.types)
   })
 })

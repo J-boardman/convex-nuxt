@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { describe, expect, it } from 'vitest'
 
 interface PackageManifest {
+  devDependencies?: Record<string, string>
   scripts: Record<string, string>
 }
 
@@ -40,5 +41,21 @@ describe('workspace development scripts', () => {
     expect(root.scripts.build).toContain('@j-boardman/convex-nuxt')
     expect(root.scripts.build).not.toContain('playground')
     expect(root.scripts.build).not.toContain('--recursive')
+  })
+
+  it('versions the two public packages through Changesets', async () => {
+    const root = await readManifest('package.json')
+    const config = JSON.parse(
+      await readFile('.changeset/config.json', 'utf8'),
+    ) as { access: string, fixed: string[][] }
+
+    expect(root.scripts.changeset).toBe('changeset')
+    expect(root.scripts['version-packages']).toBe('changeset version')
+    expect(root.devDependencies?.['@changesets/cli']).toBe('3.0.1')
+    expect(config.access).toBe('public')
+    expect(config.fixed).toEqual([[
+      '@j-boardman/convex-vue',
+      '@j-boardman/convex-nuxt',
+    ]])
   })
 })

@@ -10,6 +10,7 @@
   "packageManager": "pnpm@11.18.0",
   "scripts": {
     "build": "pnpm --filter @j-boardman/convex-vue run build && pnpm --filter @j-boardman/convex-nuxt run build",
+    "changeset": "changeset",
     "dev": "pnpm run dev:prepare && pnpm --parallel --stream --filter @j-boardman/convex-playground-backend --filter @j-boardman/convex-vue-playground --filter @j-boardman/convex-nuxt-playground run dev",
     "dev:backend": "pnpm --filter @j-boardman/convex-playground-backend run dev",
     "dev:nuxt": "pnpm --filter @j-boardman/convex-nuxt-playground run dev",
@@ -20,9 +21,11 @@
     "test": "pnpm run build && vitest run",
     "typecheck": "pnpm run typecheck:packages && pnpm run test:types",
     "typecheck:packages": "pnpm --recursive --if-present run typecheck",
-    "test:types": "tsc --project test/types/tsconfig.json --noEmit"
+    "test:types": "tsc --project test/types/tsconfig.json --noEmit",
+    "version-packages": "changeset version"
   },
   "devDependencies": {
+    "@changesets/cli": "3.0.1",
     "@eslint/js": "10.0.1",
     "@types/node": "24.13.3",
     "convex": "1.45.0",

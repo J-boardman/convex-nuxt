@@ -73,6 +73,35 @@ describe('Convex writes', () => {
     )
   })
 
+  it('accepts an optimistic update for one mutation call', async () => {
+    const harness = createHarness()
+    const optimisticUpdate = vi.fn() as OptimisticUpdate<{ body: string }>
+    const mutate = harness.app.runWithContext(() =>
+      useConvexMutation(createMessage),
+    )
+
+    await mutate({ body: 'one call' }, { optimisticUpdate })
+
+    expect(harness.mutation).toHaveBeenCalledWith(
+      createMessage,
+      { body: 'one call' },
+      { optimisticUpdate },
+    )
+  })
+
+  it('rejects combining fluent and per-call optimistic updates', () => {
+    const harness = createHarness()
+    const mutate = harness.app.runWithContext(() =>
+      useConvexMutation(createMessage).withOptimisticUpdate(() => {}),
+    )
+
+    expect(() => mutate(
+      { body: 'ambiguous' },
+      { optimisticUpdate: () => {} },
+    )).toThrow('already has an optimistic update')
+    expect(harness.mutation).not.toHaveBeenCalled()
+  })
+
   it('rejects configuring a second optimistic update', () => {
     const harness = createHarness()
     const mutate = harness.app.runWithContext(() =>

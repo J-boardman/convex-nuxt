@@ -97,6 +97,24 @@ const renameTask = useConvexMutation(api.tasks.rename).withOptimisticUpdate(
 )
 ```
 
+For an update that applies to one invocation, pass it with that call instead:
+
+```ts
+await renameTask({ id, title }, {
+  optimisticUpdate(store, args) {
+    const task = store.getQuery(api.tasks.get, { id: args.id })
+    if (task) {
+      store.setQuery(api.tasks.get, { id: args.id }, {
+        ...task,
+        title: args.title,
+      })
+    }
+  },
+})
+```
+
+The fluent and per-call forms cannot be combined on the same invocation.
+
 ## Pagination
 
 The pagination composable omits `paginationOpts` from caller arguments and

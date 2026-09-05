@@ -29,6 +29,11 @@ expectTypeOf(create({ body: 'hello' })).toEqualTypeOf<Promise<string>>()
 create.withOptimisticUpdate((_store, args) => {
   expectTypeOf(args).toEqualTypeOf<{ body: string }>()
 })
+create({ body: 'one call' }, {
+  optimisticUpdate: (_store, args) => {
+    expectTypeOf(args).toEqualTypeOf<{ body: string }>()
+  },
+})
 
 const clear = useConvexMutation(clearMessages)
 expectTypeOf(clear()).toEqualTypeOf<Promise<number>>()
@@ -45,3 +50,5 @@ create({ body: 42 })
 runSummary()
 // @ts-expect-error optimistic updates must be synchronous
 create.withOptimisticUpdate(async () => {})
+// @ts-expect-error per-call optimistic updates must be synchronous
+create({ body: 'async' }, { optimisticUpdate: async () => {} })

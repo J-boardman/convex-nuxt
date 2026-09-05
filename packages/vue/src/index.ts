@@ -43,4 +43,5 @@ export {
 export type {
   ConvexAction,
   ConvexMutation,
+  ConvexMutationOptions,
 } from './writes.js'

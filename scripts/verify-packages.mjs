@@ -96,6 +96,7 @@ async function verifyVueConsumer(temporaryRoot, vueArchive) {
     type: 'module',
     dependencies: {
       '@j-boardman/convex-vue': `file:${vueArchive}`,
+      '@vue/server-renderer': '3.5.42',
       convex: '1.45.0',
       vue: '3.5.42',
     },
@@ -137,6 +138,43 @@ void useConvexQuery
 void useConvexPaginatedQuery
 void installConvexSsrBridge
 void createConvexHttpClient
+`)
+
+  await writeFile(join(consumerRoot, 'ssr.mjs'), `
+import assert from 'node:assert/strict'
+import {
+  convexVue,
+  useConvexQuery,
+} from '@j-boardman/convex-vue'
+import {
+  decodeConvexSsrSeed,
+  encodeConvexSsrSeed,
+} from '@j-boardman/convex-vue/server'
+import { makeFunctionReference } from 'convex/server'
+import { createSSRApp, h } from 'vue'
+import { renderToString } from '@vue/server-renderer'
+
+const transportedSeed = JSON.parse(JSON.stringify(encodeConvexSsrSeed({
+  count: 2n,
+  label: 'rendered from a packed seed',
+})))
+const initialData = decodeConvexSsrSeed(transportedSeed)
+const query = makeFunctionReference('probes:summary')
+const app = createSSRApp({
+  setup() {
+    const result = useConvexQuery(query, {}, { initialData, server: true })
+    return () => h('main', [
+      h('strong', result.data?.label),
+      h('span', String(result.data?.count)),
+    ])
+  },
+})
+
+app.use(convexVue, { url: 'https://example.convex.cloud' })
+
+const html = await renderToString(app)
+assert.match(html, /rendered from a packed seed/)
+assert.ok(html.includes('>2</span>'))
 `)
 
   await writeFile(join(consumerRoot, 'index.html'), `
@@ -188,6 +226,7 @@ export default defineConfig({ plugins: [vue()] })
 
   await installConsumer(consumerRoot)
   run(process.execPath, ['check.mjs'], consumerRoot)
+  run(process.execPath, ['ssr.mjs'], consumerRoot)
   run(pnpm, ['exec', 'vue-tsc', '--noEmit'], consumerRoot)
   run(pnpm, ['exec', 'vite', 'build'], consumerRoot)
 }

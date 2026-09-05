@@ -19,6 +19,9 @@ describe('workspace development scripts', () => {
     expect(root.scripts.dev).toContain('@j-boardman/convex-playground-backend')
     expect(root.scripts.dev).toContain('@j-boardman/convex-vue-playground')
     expect(root.scripts.dev).toContain('@j-boardman/convex-nuxt-playground')
+    expect(root.scripts.typecheck).toBe(
+      'pnpm build && pnpm run typecheck:packages && pnpm run test:types',
+    )
     expect(root.scripts).toMatchObject({
       'dev:backend': expect.stringContaining('convex-playground-backend'),
       'dev:nuxt': expect.stringContaining('convex-nuxt-playground'),

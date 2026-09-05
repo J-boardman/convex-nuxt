@@ -73,7 +73,7 @@ details.
 | `pnpm dev:backend` | Run only the shared Convex backend. |
 | `pnpm dev:vue` | Run only the Vue playground. |
 | `pnpm dev:nuxt` | Run only the Nuxt playground. |
-| `pnpm typecheck` | Check both packages, public type tests, and supported consumers. |
+| `pnpm typecheck` | Build declarations, then check both packages and public types. |
 | `pnpm lint` | Check source, tests, scripts, fixtures, and configuration. |
 | `pnpm build` | Build both public packages in dependency order. |
 | `pnpm test:unit` | Run deterministic controller and lifecycle tests. |

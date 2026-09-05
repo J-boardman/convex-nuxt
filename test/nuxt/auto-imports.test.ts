@@ -14,6 +14,7 @@ describe('Nuxt Convex auto-imports', () => {
       'useConvexMutation',
       'useConvexPaginatedQuery',
       'useConvexQuery',
+      'useConvexQueries',
     ])
     expect(convexAutoImports.every(
       entry => entry.from === '@j-boardman/convex-nuxt/runtime',

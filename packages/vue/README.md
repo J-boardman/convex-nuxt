@@ -80,6 +80,23 @@ request. `keepPreviousData` exposes the previous result as `stale` while new
 reactive arguments load. Query controllers unsubscribe with their Vue effect
 scope; they do not close the application client.
 
+For a dynamic number of queries, use one reactive keyed request map. Result
+callbacks from the same turn are published as one state snapshot, so related
+queries do not expose an intermediate mixed render:
+
+```ts
+const channels = ref(['general', 'support'])
+const messagesByChannel = useConvexQueries(() => Object.fromEntries(
+  channels.value.map(channel => [channel, {
+    query: api.messages.list,
+    args: { channel },
+  }]),
+))
+```
+
+Add, change, or remove keys to reconcile their subscriptions. This primitive
+is client-live and does not automatically server-render a dynamic query map.
+
 Optimistic updates use Convex's local store and rollback behavior:
 
 ```ts

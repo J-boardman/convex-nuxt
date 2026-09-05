@@ -52,7 +52,8 @@ const messages = useConvexPaginatedQuery(
 </script>
 ```
 
-Available auto-imports are `useConvexQuery`, `useConvexPaginatedQuery`,
+Available auto-imports are `useConvexQuery`, `useConvexQueries`,
+`useConvexPaginatedQuery`,
 `useConvexMutation`, `useConvexAction`, `setupConvexAuth`, `useConvexAuth`,
 `useConvexClient`, `useConvexConnectionState`, and `closeConvex`.
 

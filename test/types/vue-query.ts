@@ -9,6 +9,7 @@ import {
   useConvexAuth,
   useConvexPaginatedQuery,
   useConvexQuery,
+  useConvexQueries,
 } from '@j-boardman/convex-vue'
 import type {
   ConvexAuthState,
@@ -48,6 +49,17 @@ useConvexQuery(
 useConvexQuery(viewerQuery)
 useConvexQuery(viewerQuery, 'skip')
 
+const queryMap = useConvexQueries({
+  messages: { query: messagesQuery, args: { channel: 'general' } },
+  viewer: { query: viewerQuery, args: {} },
+})
+expectTypeOf(queryMap.state.messages).toEqualTypeOf<
+  ConvexQueryState<string[]>
+>()
+expectTypeOf(queryMap.state.viewer).toEqualTypeOf<
+  ConvexQueryState<{ name: string } | null>
+>()
+
 const paginatedMessages = useConvexPaginatedQuery(
   paginatedMessagesQuery,
   { channel: 'general' },
@@ -78,6 +90,13 @@ useConvexQuery(messagesQuery)
 useConvexQuery(messagesQuery, { channel: 42 })
 // @ts-expect-error only generated query references are accepted
 useConvexQuery('messages:list', { channel: 'general' })
+useConvexQueries({
+  // @ts-expect-error multi-query arguments retain their generated types
+  invalid: {
+    query: messagesQuery,
+    args: { channel: 42 },
+  },
+})
 useConvexPaginatedQuery(
   paginatedMessagesQuery,
   // @ts-expect-error paginationOpts is managed by the composable

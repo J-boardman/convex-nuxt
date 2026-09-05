@@ -300,6 +300,11 @@ export default defineNuxtConfig({
   run(process.execPath, ['check.mjs'], consumerRoot)
   run(pnpm, ['exec', 'nuxt', 'typecheck'], consumerRoot)
   run(pnpm, ['exec', 'nuxt', 'build'], consumerRoot)
+  run(
+    pnpm,
+    ['exec', 'nuxt', 'build', '--preset', 'cloudflare-module'],
+    consumerRoot,
+  )
 }
 
 const temporaryRoot = await mkdtemp(join(tmpdir(), 'convex-packages-'))

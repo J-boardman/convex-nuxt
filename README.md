@@ -45,6 +45,8 @@ root command: `pnpm dev:backend`, `pnpm dev:vue`, and `pnpm dev:nuxt`.
 
 The development and release gates are described in
 [`docs/development-and-release.md`](./docs/development-and-release.md).
+Applications moving from the existing community integrations should follow the
+deliberate [migration guide](./docs/migrating-from-community-packages.md).
 
 ## License
 

@@ -9,10 +9,12 @@ const convexNuxtPlugin: Plugin<Record<string, never>> = defineNuxtPlugin({
   enforce: 'pre',
   setup(nuxtApp) {
     const config = useRuntimeConfig()
-    installConvexRuntime(nuxtApp.vueApp, config.public.convex)
+    const options = resolveConvexRuntimeOptions(config.public.convex)
+    installConvexRuntime(nuxtApp.vueApp, options)
     installNuxtSsrBridge(
       nuxtApp.vueApp,
-      resolveConvexRuntimeOptions(config.public.convex).url,
+      options.url,
+      options.ssr,
     )
   },
 })

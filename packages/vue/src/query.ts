@@ -111,6 +111,8 @@ export function useConvexQuery<Query extends FunctionReference<'query'>>(
   type QueryResult = FunctionReturnType<Query>
   const runtime = useConvexRuntime()
   const bridge = useConvexSsrBridge()
+  const serverRendering = options.server
+    ?? (bridge ? bridge.defaultServerRendering ?? true : false)
   let initialNormalized: NormalizedArgs | NormalizedSkip
   try {
     initialNormalized = normalizeArgs(
@@ -124,7 +126,7 @@ export function useConvexQuery<Query extends FunctionReference<'query'>>(
     ? undefined
     : initialNormalized.key
   if (
-    options.server === true
+    serverRendering
     && !runtime.client
     && !bridge
     && options.initialData === undefined
@@ -137,7 +139,7 @@ export function useConvexQuery<Query extends FunctionReference<'query'>>(
   }
   const seed = bridge?.useQuerySeed<QueryResult>({
     args: initialNormalized.skipped ? {} : initialNormalized.args,
-    enabled: options.server !== false
+    enabled: serverRendering
       && options.initialData === undefined
       && !initialNormalized.skipped,
     key: `${getFunctionName(query)}:${initialKey ?? 'skip'}`,

@@ -18,6 +18,13 @@ describe('Nuxt runtime installation', () => {
       client: null,
       url: 'https://calm-wren-123.convex.cloud',
     })
+    expect(resolveConvexRuntimeOptions({
+      url: 'https://calm-wren-123.convex.cloud',
+    }).ssr).toBe(true)
+    expect(resolveConvexRuntimeOptions({
+      ssr: false,
+      url: 'https://calm-wren-123.convex.cloud',
+    }).ssr).toBe(false)
   })
 
   it('requires a public deployment URL and validates client flags', () => {
@@ -32,5 +39,9 @@ describe('Nuxt runtime installation', () => {
       client: { logger: false },
       url: 'https://calm-wren-123.convex.cloud',
     })).toThrow('client.logger is not supported')
+    expect(() => resolveConvexRuntimeOptions({
+      ssr: 'sometimes',
+      url: 'https://calm-wren-123.convex.cloud',
+    })).toThrow('convex.ssr must be a boolean')
   })
 })

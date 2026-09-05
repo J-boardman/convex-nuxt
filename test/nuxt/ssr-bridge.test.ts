@@ -112,6 +112,17 @@ describe('Nuxt SSR bridge', () => {
     expect(harness.pendingTasks).toHaveLength(0)
   })
 
+  it('exposes the configured server-rendering default', () => {
+    const payload = new Map<string, ConvexSsrSeed>()
+    const harness = createSeedHarness(payload, vi.fn())
+
+    expect(createNuxtSsrBridge(
+      'https://example.convex.cloud',
+      harness.dependencies,
+      false,
+    ).defaultServerRendering).toBe(false)
+  })
+
   it('reuses a serialized first page during pagination hydration', async () => {
     interface Message {
       body: string

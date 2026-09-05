@@ -6,6 +6,7 @@ const supported: ModuleOptions = {
     skipConvexDeploymentUrlCheck: true,
     unsavedChangesWarning: false,
   },
+  ssr: false,
   url: 'https://example.convex.cloud',
 }
 

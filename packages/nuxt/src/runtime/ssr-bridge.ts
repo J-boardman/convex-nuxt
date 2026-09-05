@@ -106,10 +106,15 @@ const nuxtAuthSeedDependencies: NuxtAuthSeedDependencies = {
   useAsyncData: useAuthAsyncData,
 }
 
-export function installNuxtSsrBridge(app: App, deploymentUrl: string): void {
+export function installNuxtSsrBridge(
+  app: App,
+  deploymentUrl: string,
+  defaultServerRendering: boolean,
+): void {
   const queryBridge = createNuxtSsrBridge(
     deploymentUrl,
     nuxtBridgeDependencies,
+    defaultServerRendering,
   )
   installConvexSsrBridge(
     app,

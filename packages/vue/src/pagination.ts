@@ -152,6 +152,8 @@ export function useConvexPaginatedQuery<
   type Item = ConvexPaginatedQueryItem<Query>
   const runtime = useConvexRuntime()
   const bridge = useConvexSsrBridge()
+  const serverRendering = options.server
+    ?? (bridge ? bridge.defaultServerRendering ?? true : false)
   let initialNormalized: NormalizedArgs | NormalizedSkip
   try {
     initialNormalized = normalizeArgs(
@@ -165,7 +167,7 @@ export function useConvexPaginatedQuery<
     ? undefined
     : initialNormalized.key
   if (
-    options.server === true
+    serverRendering
     && !runtime.client
     && !bridge
     && options.initialData === undefined
@@ -186,7 +188,7 @@ export function useConvexPaginatedQuery<
             numItems: options.initialNumItems,
           },
         },
-    enabled: options.server !== false
+    enabled: serverRendering
       && options.initialData === undefined
       && !initialNormalized.skipped,
     key: `${getFunctionName(query)}:pagination:${options.initialNumItems}:${initialKey ?? 'skip'}`,

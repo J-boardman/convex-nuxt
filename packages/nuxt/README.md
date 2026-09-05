@@ -72,8 +72,10 @@ Queries server-render by default. The module:
 5. keeps the value visible until the browser's live subscription takes over.
 
 Set `{ server: false }` on a query or paginated query when its first value must
-be browser-only. Client-side navigation talks directly to the authenticated
-Convex browser client rather than routing reads through a Nitro endpoint.
+be browser-only. Set `convex.ssr` to `false` in `nuxt.config.ts` to make that
+the application default; an individual `{ server: true }` query can opt back
+in. Client-side navigation talks directly to the authenticated Convex browser
+client rather than routing reads through a Nitro endpoint.
 
 ## Authenticated SSR
 
@@ -137,6 +139,7 @@ cannot share authentication.
 interface ModuleOptions {
   url?: string
   autoImports?: boolean // default: true
+  ssr?: boolean // default: true
   client?: {
     skipConvexDeploymentUrlCheck?: boolean
     unsavedChangesWarning?: boolean

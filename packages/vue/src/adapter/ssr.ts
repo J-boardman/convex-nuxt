@@ -27,6 +27,7 @@ export interface ConvexAuthSeedRequest {
 }
 
 export interface ConvexSsrBridge {
+  readonly defaultServerRendering?: boolean
   readonly name: string
   useAuthSeed?: (request: ConvexAuthSeedRequest) => ConvexAuthSeed
   useQuerySeed<ValueType>(

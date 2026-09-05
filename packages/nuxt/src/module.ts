@@ -12,6 +12,7 @@ export type { ConvexNuxtClientOptions } from './runtime/config.js'
 export interface ModuleOptions {
   autoImports?: boolean
   client?: ConvexNuxtClientOptions
+  ssr?: boolean
   url?: string
 }
 
@@ -26,6 +27,7 @@ const convexNuxtModule: NuxtModule<ModuleOptions> = defineNuxtModule<ModuleOptio
   defaults: {
     autoImports: true,
     client: {},
+    ssr: true,
   },
   setup(options, nuxt) {
     const resolver = createResolver(import.meta.url)
@@ -34,6 +36,7 @@ const convexNuxtModule: NuxtModule<ModuleOptions> = defineNuxtModule<ModuleOptio
       nuxt.options.runtimeConfig.public.convex,
       {
         client: options.client,
+        ssr: options.ssr,
         url: options.url ?? '',
       } satisfies ConvexNuxtPublicRuntimeConfig,
     ) as ConvexNuxtPublicRuntimeConfig

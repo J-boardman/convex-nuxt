@@ -281,6 +281,36 @@ describe('useConvexQuery', () => {
     expect(result.state).toEqual({ status: 'success', data: ['live'] })
   })
 
+  it('uses the adapter SSR default unless the query overrides it', () => {
+    const harness = createHarness()
+    const data = ref<string[]>()
+    const error = ref<Error>()
+    const pending = ref(false)
+    const useQuerySeed = vi.fn(() => ({ data, error, pending })) as never
+    installConvexSsrBridge(harness.app, {
+      defaultServerRendering: false,
+      name: 'test',
+      useQuerySeed,
+    })
+    const query = makeFunctionReference<'query', { channel: string }, string[]>(
+      'messages:list',
+    )
+
+    withinHarness(harness, () =>
+      useConvexQuery(query, { channel: 'default' }),
+    )
+    withinHarness(harness, () =>
+      useConvexQuery(query, { channel: 'override' }, { server: true }),
+    )
+
+    expect(useQuerySeed).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      enabled: false,
+    }))
+    expect(useQuerySeed).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      enabled: true,
+    }))
+  })
+
   it('discards an adapter seed when reactive arguments change', async () => {
     const harness = createHarness()
     const channel = ref('general')

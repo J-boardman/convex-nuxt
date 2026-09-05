@@ -7,7 +7,12 @@ export type ConvexNuxtClientOptions = Pick<
 
 export interface ConvexNuxtPublicRuntimeConfig {
   client?: ConvexNuxtClientOptions
+  ssr?: boolean
   url: string
+}
+
+export interface ConvexNuxtRuntimeOptions extends ConvexVueOptions {
+  ssr: boolean
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -25,7 +30,7 @@ function optionalBoolean(
   return value
 }
 
-export function resolveConvexRuntimeOptions(value: unknown): ConvexVueOptions {
+export function resolveConvexRuntimeOptions(value: unknown): ConvexNuxtRuntimeOptions {
   if (!isRecord(value) || typeof value.url !== 'string' || value.url.trim() === '') {
     throw new Error(
       'Convex requires runtimeConfig.public.convex.url. '
@@ -35,6 +40,9 @@ export function resolveConvexRuntimeOptions(value: unknown): ConvexVueOptions {
 
   if (value.client !== undefined && !isRecord(value.client)) {
     throw new Error('runtimeConfig.public.convex.client must be an object.')
+  }
+  if (value.ssr !== undefined && typeof value.ssr !== 'boolean') {
+    throw new Error('runtimeConfig.public.convex.ssr must be a boolean.')
   }
 
   const suppliedClient = value.client as Record<string, unknown> | undefined
@@ -65,6 +73,7 @@ export function resolveConvexRuntimeOptions(value: unknown): ConvexVueOptions {
 
   return {
     client,
+    ssr: value.ssr ?? true,
     url: value.url.trim(),
   }
 }

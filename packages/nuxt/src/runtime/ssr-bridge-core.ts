@@ -37,8 +37,10 @@ function normalizeError(error: unknown): Error | undefined {
 export function createNuxtSsrBridge(
   deploymentUrl: string,
   dependencies: NuxtSsrBridgeDependencies,
+  defaultServerRendering = true,
 ): ConvexSsrBridge {
   return {
+    defaultServerRendering,
     name: 'nuxt',
     useQuerySeed<ValueType>(request: ConvexQuerySeedRequest) {
       const key = `convex:${hash([deploymentUrl, request.key])}`

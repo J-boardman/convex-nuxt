@@ -79,8 +79,10 @@ describe('workspace development scripts', () => {
 
     expect(root.scripts['test:unit']).toContain('vitest run')
     expect(root.scripts['test:module']).toContain('test/nuxt')
+    expect(root.scripts['test:e2e']).toBe('playwright test')
     expect(root.scripts.test).toContain('test:unit')
     expect(root.scripts.test).toContain('test:module')
+    expect(root.scripts.test).toContain('test:e2e')
     expect(root.scripts.test).toContain('test:package')
     expect(root.scripts.verify).toBe('pnpm typecheck && pnpm lint && pnpm test')
   })

@@ -28,5 +28,9 @@ describe('Nuxt runtime installation', () => {
       client: { unsavedChangesWarning: 'sometimes' },
       url: 'https://calm-wren-123.convex.cloud',
     })).toThrow('unsavedChangesWarning must be a boolean')
+    expect(() => resolveConvexRuntimeOptions({
+      client: { logger: false },
+      url: 'https://calm-wren-123.convex.cloud',
+    })).toThrow('client.logger is not supported')
   })
 })

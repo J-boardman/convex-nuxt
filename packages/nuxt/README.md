@@ -146,7 +146,9 @@ interface ModuleOptions {
 
 Only JSON-serializable browser options belong in Nuxt config. Use the server
 entry for one-shot server operations and the runtime entry for explicit browser
-imports.
+imports. Function-valued browser options such as custom loggers and WebSocket
+constructors are available to plain Vue installation, but are rejected here
+instead of being silently discarded by Nuxt runtime-config serialization.
 
 ## Plain Vue applications
 

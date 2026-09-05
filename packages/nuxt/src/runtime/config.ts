@@ -1,7 +1,12 @@
 import type { ConvexVueClientOptions, ConvexVueOptions } from '@j-boardman/convex-vue'
 
+export type ConvexNuxtClientOptions = Pick<
+  ConvexVueClientOptions,
+  'skipConvexDeploymentUrlCheck' | 'unsavedChangesWarning'
+>
+
 export interface ConvexNuxtPublicRuntimeConfig {
-  client?: ConvexVueClientOptions
+  client?: ConvexNuxtClientOptions
   url: string
 }
 
@@ -11,7 +16,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function optionalBoolean(
   value: unknown,
-  key: keyof ConvexVueClientOptions,
+  key: keyof ConvexNuxtClientOptions,
 ): boolean | undefined {
   if (value === undefined) return undefined
   if (typeof value !== 'boolean') {
@@ -33,6 +38,20 @@ export function resolveConvexRuntimeOptions(value: unknown): ConvexVueOptions {
   }
 
   const suppliedClient = value.client as Record<string, unknown> | undefined
+  const supportedClientKeys = new Set<keyof ConvexNuxtClientOptions>([
+    'skipConvexDeploymentUrlCheck',
+    'unsavedChangesWarning',
+  ])
+  const unsupportedClientKey = Object.keys(suppliedClient ?? {}).find(
+    key => !supportedClientKeys.has(key as keyof ConvexNuxtClientOptions),
+  )
+  if (unsupportedClientKey) {
+    throw new Error(
+      `runtimeConfig.public.convex.client.${unsupportedClientKey} is not supported. `
+      + 'Nuxt public runtime config accepts only JSON-serializable Convex client flags.',
+    )
+  }
+
   const client: ConvexVueClientOptions = {
     skipConvexDeploymentUrlCheck: optionalBoolean(
       suppliedClient?.skipConvexDeploymentUrlCheck,

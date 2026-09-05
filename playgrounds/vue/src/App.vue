@@ -10,7 +10,7 @@ import {
   useConvexPaginatedQuery,
   useConvexQuery,
 } from '@j-boardman/convex-vue'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useProbeOperations } from './useProbeOperations'
 
 const client = useConvexClient()
@@ -22,7 +22,14 @@ setupConvexAuth(() => ({
 const auth = useConvexAuth()
 const deployment = import.meta.env.VITE_CONVEX_URL
 const connection = useConvexConnectionState()
-const probes = useConvexQuery(api.probes.list, { surface: 'vue' })
+const queryEnabled = ref(true)
+const querySurface = ref<'vue' | 'nuxt'>('vue')
+const queryArgs = computed<{ surface: 'vue' | 'nuxt' } | 'skip'>(() =>
+  queryEnabled.value ? { surface: querySurface.value } : 'skip',
+)
+const probes = useConvexQuery(api.probes.list, queryArgs, {
+  keepPreviousData: true,
+})
 const paginatedProbes = useConvexPaginatedQuery(
   api.probes.paginated,
   { surface: 'vue' },
@@ -117,6 +124,24 @@ const probeCount = computed(() => probes.data?.length ?? 0)
           <span v-if="probes.error">{{ probes.error.message }}</span>
           <span v-else>Subscription state is explicit and reactive.</span>
         </div>
+
+        <form class="query-controls" aria-label="Reactive query controls">
+          <label>
+            Event surface
+            <select v-model="querySurface" data-testid="query-surface">
+              <option value="vue">Vue</option>
+              <option value="nuxt">Nuxt</option>
+            </select>
+          </label>
+          <label class="query-toggle">
+            <input
+              v-model="queryEnabled"
+              data-testid="query-enabled"
+              type="checkbox"
+            >
+            Subscription enabled
+          </label>
+        </form>
 
         <ol v-if="probes.data?.length" class="event-list">
           <li v-for="probe in probes.data" :key="probe._id">

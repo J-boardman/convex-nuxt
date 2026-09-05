@@ -290,6 +290,49 @@ dd {
   background: #d84b48;
 }
 
+.query-controls {
+  display: flex;
+  gap: 18px;
+  align-items: end;
+  padding: 14px 24px;
+  border-bottom: 1px solid rgba(19, 35, 63, 0.2);
+  background: #eef2f9;
+}
+
+.query-controls label {
+  display: grid;
+  gap: 6px;
+  color: #56647d;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.query-controls select {
+  min-width: 130px;
+  padding: 8px 32px 8px 10px;
+  border: 1px solid #7a88a1;
+  border-radius: 0;
+  background: #f8f9fc;
+  color: #13233f;
+  font: inherit;
+}
+
+.query-controls .query-toggle {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 34px;
+}
+
+.query-toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #315cbb;
+}
+
 .events {
   padding: 0;
   margin: 0;

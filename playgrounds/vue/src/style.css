@@ -212,6 +212,49 @@ dd {
   background: #9c2f28;
 }
 
+.query-controls {
+  display: flex;
+  gap: 18px;
+  align-items: end;
+  padding: 14px 24px;
+  border-bottom: 1px solid rgba(16, 47, 50, 0.24);
+  background: #e8f0ed;
+}
+
+.query-controls label {
+  display: grid;
+  gap: 6px;
+  color: #496c6c;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.query-controls select {
+  min-width: 130px;
+  padding: 8px 32px 8px 10px;
+  border: 1px solid #789392;
+  border-radius: 0;
+  background: #f4f7f4;
+  color: #102f32;
+  font: inherit;
+}
+
+.query-controls .query-toggle {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 34px;
+}
+
+.query-toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #e54f40;
+}
+
 .event-list {
   padding: 0;
   margin: 0;

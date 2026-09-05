@@ -18,7 +18,14 @@ defineProps<{
   deploymentUrl: string
 }>()
 
-const probes = useConvexQuery(api.probes.list, { surface: 'nuxt' })
+const queryEnabled = ref(true)
+const querySurface = ref<'vue' | 'nuxt'>('nuxt')
+const queryArgs = computed<{ surface: 'vue' | 'nuxt' } | 'skip'>(() =>
+  queryEnabled.value ? { surface: querySurface.value } : 'skip',
+)
+const probes = useConvexQuery(api.probes.list, queryArgs, {
+  keepPreviousData: true,
+})
 const paginatedProbes = useConvexPaginatedQuery(
   api.probes.paginated,
   { surface: 'nuxt' },
@@ -92,6 +99,24 @@ const connectionCount = computed(() => connection?.value.connectionCount ?? 0)
           <span v-if="probes.error">{{ probes.error.message }}</span>
           <span v-else>The subscription begins after client hydration.</span>
         </div>
+
+        <form class="query-controls" aria-label="Reactive query controls">
+          <label>
+            Event surface
+            <select v-model="querySurface" data-testid="query-surface">
+              <option value="vue">Vue</option>
+              <option value="nuxt">Nuxt</option>
+            </select>
+          </label>
+          <label class="query-toggle">
+            <input
+              v-model="queryEnabled"
+              data-testid="query-enabled"
+              type="checkbox"
+            >
+            Subscription enabled
+          </label>
+        </form>
 
         <ol v-if="probes.data?.length" class="events">
           <li v-for="probe in probes.data" :key="probe._id">

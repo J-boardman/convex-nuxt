@@ -51,7 +51,8 @@ The playgrounds and packed consumers answer different questions.
 
 The Vue playground exercises live queries, reactive arguments, skip and stale
 states, mutations, actions, optimistic updates, pagination, auth, connection
-state, teardown, remounting, and HMR.
+state, and teardown. It is also the manual HMR surface; HMR is not yet an
+automated support claim.
 
 The Nuxt playground exercises the same shared behavior plus server-rendered
 HTML, payload reuse, hydration, static generation, and server helpers. Focused
@@ -59,8 +60,10 @@ tests cover authenticated SSR state and concurrent request isolation without
 putting credentials in the browser fixture.
 
 The shared Convex playground backend supplies deterministic query, pagination,
-auth, action, transaction, error, and unusual-value cases. Tests that require a
-hosted Convex deployment are separate from the credential-free local suite.
+auth, action, transaction, error, and unusual-value cases. The live suite starts
+an accountless disposable Convex backend by default, generates an ephemeral
+signing key for its auth checks, and removes both after the run. An explicit
+`CONVEX_URL` can instead target a separately managed compatible deployment.
 
 ## Root script contract
 
@@ -83,7 +86,8 @@ details.
 | `pnpm test:e2e` | Run deterministic Vue and Nuxt browser tests. |
 | `pnpm test:package` | Pack, inspect, install, and build both npm tarballs. |
 | `pnpm test` | Run the complete deterministic, credential-free local suite. |
-| `pnpm test:live` | Exercise live browser behavior and static generation against the supplied Convex URL. |
+| `pnpm test:live` | Provision a disposable Convex backend and exercise live browser behavior, authenticated SSR, and static generation. |
+| `CONVEX_URL=... pnpm test:live` | Exercise the live suite against a separately managed compatible deployment. |
 | `pnpm verify` | Typecheck, lint, build, and run the local suite. |
 | `pnpm changeset` | Record release intent for a package-facing change. |
 | `pnpm preview` | Publish both packages to `pkg.pr.new` from CI. |
@@ -107,9 +111,10 @@ Tracked POSIX shell hooks live in `.githooks`. The private root package's
 - `pre-push` runs `pnpm test`. The suite is deterministic and requires no npm
   credentials or hosted Convex secrets.
 
-CI repeats every local gate because hooks can be bypassed. Deployment-backed
-live tests require an explicit `CONVEX_URL`; run them against a disposable local
-backend or a protected CI deployment before publication.
+CI repeats every local gate because hooks can be bypassed. A separate Node 24
+job also runs `pnpm test:live` against the disposable backend, so live queries,
+WebSockets, authenticated SSR isolation, hydration, and static generation do
+not depend on repository credentials.
 
 ## Versioning and previews
 

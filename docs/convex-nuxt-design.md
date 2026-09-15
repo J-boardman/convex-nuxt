@@ -1,8 +1,10 @@
-# Convex for Vue and Nuxt: design proposal
+# Convex for Vue and Nuxt: design and implementation record
 
-Status: proposed
+Status: accepted; pre-release implementation in progress
 
 Date: 2026-09-02
+
+Last verified: 2026-09-16
 
 Audience: maintainers of new Vue and Nuxt integrations for Convex
 
@@ -94,7 +96,7 @@ When a community implementation conflicts with the official Svelte behavior, mat
 - Hiding the distinction between a live browser client and a stateless server HTTP client.
 - Compatibility with community-package bugs or undocumented shapes. A deliberate migration layer may be added only for a named consumer.
 
-## Proposed caller contract
+## Public caller contract
 
 ### Installation and basic use
 
@@ -692,32 +694,42 @@ The Vue package declares `vue` and `convex` as peer dependencies. The Nuxt packa
 
 Target Nuxt 4.x first. Keep the runtime compatible with Nuxt 3.17+ where the same public primitives exist, and ship Nuxt 3 support only after the same package tarball passes the Nuxt 3 fixture suite. Declare the tested range rather than assuming `@nuxt/kit` compatibility.
 
-## Feature-parity plan
+## Feature-parity status
 
-Legend: M1 is required for the first stable release; M2 is the React-parity follow-up.
+The status column records implementation plus the strongest current proof. A
+row is not called complete merely because the API exists.
 
-| Capability | React 1.45 | Svelte 0.14 | Proposed Vue / Nuxt |
+| Capability | React 1.45 | Svelte 0.14 | Current Vue / Nuxt status |
 | --- | ---: | ---: | --- |
-| App-scoped live client | Yes | Yes | M1 |
-| Typed live query | Yes | Yes | M1 |
-| Explicit pending/success/error state | Experimental object API | Yes | M1, authoritative state union |
-| Reactive arguments and `skip` | Yes | Yes | M1 |
-| Keep previous data / stale state | Not stable hook API | Yes | M1 |
-| Typed mutation and action | Yes | Yes | M1 |
-| Optimistic update and rollback | Yes | Yes | M1 |
-| Reactive pagination | Yes | Yes | M1 |
-| SSR seed to live subscription | Preloaded query/Next helpers | `convexLoad` | M1 manual seed in Vue; automatic Nuxt payload bridge |
-| Authenticated SSR token isolation | Framework helper | Async-local server helper | M1 Nuxt via H3 context; host-owned in generic Vue SSR |
-| Generic reactive auth adapter | Yes | Yes | M1 |
-| Auth refresh state | Yes | No | M2/upstream; not exposed by public `ConvexClient` in 1.45 |
-| Server HTTP client helper | Framework-specific helpers | Yes | M1 generic factory; Nuxt adds request-aware helper |
-| Connection-state composable | Yes | No | M1; small and useful |
-| Explicit teardown | Client close | Yes | M1 |
-| Dynamic `useQueries` | Yes | No | M2 |
-| Auth render components | Yes | No | M2 |
-| Paginated optimistic helpers | Yes | No | M2 |
-| Prewarm query | Client method | No | M2 or direct client escape hatch |
+| App-scoped live client | Yes | Yes | Implemented; unit and live-browser proof |
+| Typed live query | Yes | Yes | Implemented; type, unit, packed-consumer, and live-browser proof |
+| Explicit pending/success/error state | Experimental object API | Yes | Implemented as an authoritative state union; unit and browser proof |
+| Reactive arguments and `skip` | Yes | Yes | Implemented; unit and browser proof |
+| Keep previous data / stale state | Not stable hook API | Yes | Implemented; unit and browser proof |
+| Typed mutation and action | Yes | Yes | Implemented; type, unit, and live-browser proof |
+| Optimistic update and rollback | Yes | Yes | Implemented; unit and rejected-mutation browser proof |
+| Reactive pagination | Yes | Yes | Implemented; SSR hydration, early load, and exhaustion have live-browser proof; invalid-cursor recovery has unit proof |
+| SSR seed to live subscription | Preloaded query/Next helpers | `convexLoad` | Implemented; manual Vue seed and automatic Nuxt payload handoff have packed and live-browser proof |
+| Authenticated SSR token isolation | Framework helper | Async-local server helper | Implemented for Nuxt; concurrent signed identities and token-free HTML have live-browser proof; generic Vue SSR remains host-owned |
+| Generic reactive auth adapter | Yes | Yes | Implemented; controller transitions have unit proof and Nuxt authenticated hydration has live-browser proof |
+| Auth refresh state | Yes | No | Deferred upstream; public `ConvexClient` 1.45 does not expose the React refresh callback |
+| Server HTTP client helper | Framework-specific helpers | Yes | Implemented; generic factory and request-aware Nuxt helper have unit and packed-consumer proof |
+| Connection-state composable | Yes | No | Implemented; unit and live WebSocket proof |
+| Explicit teardown | Client close | Yes | Implemented; unit and component-disposal/navigation proof; app-root remount and HMR browser proof remain |
+| Dynamic `useQueries` | Yes | No | Implemented; type and atomic controller proof, but no browser proof yet |
+| Auth render components | Yes | No | Deferred; templates can branch on `useConvexAuth` without another state owner |
+| Paginated optimistic helpers | Yes | No | Deferred; ordinary Convex optimistic mutations are supported |
+| Prewarm query | Client method | No | Deferred; the injected client remains the escape hatch |
 | Multiple deployments per app | Possible with explicit clients | No | Not planned |
+
+### Pre-release evidence still required
+
+The core M1 surface is implemented. The first stable definition of done still
+requires consumer-facing proof for application-root remount/HMR and for an
+atomic dynamic query set. Provider refresh, auth-context changes, and sign-out
+also need a real browser sequence even though their state machines have unit
+coverage. Nuxt 3, older exact dependency floors, and additional browsers remain
+outside the supported matrix until dedicated fixtures pass.
 
 File storage, search, and vector-search features require no special framework wrapper; callers use generated Convex functions and ordinary browser upload APIs. They belong in examples and integration tests, not in new client abstractions.
 

@@ -8,9 +8,9 @@ same as it being supported.
 
 | Surface | Supported floor | Current verification |
 | --- | --- | --- |
-| Vue | Vue 3.5 | Source typecheck, clean packed Vite consumer, production build, and generic SSR seed render |
-| Nuxt | Nuxt 4.5 | Module fixture, generated types, packed production consumer, live SSR hydration, and static generation |
-| Convex | Convex 1.45 | Unit fakes exercise its public client contracts; packed consumers install the declared peer |
+| Vue | Vue 3.5 | Source typecheck, clean packed Vite consumer, production build, generic SSR seed render, and live browser behavior |
+| Nuxt | Nuxt 4.5 | Module fixture, generated types, packed production consumer, anonymous and authenticated live SSR hydration, request isolation, and static generation |
+| Convex | Convex 1.45 | Unit fakes exercise its public contracts, packed consumers install the declared peer, and the live suite deploys the playground functions to a disposable backend |
 | Node.js | Node 22 | CI runs the complete repository gate on Node 22 and 24 |
 | Browser | Chrome | Playwright launches the system Chrome channel against both playgrounds; local verification uses Chrome 143 |
 | Nitro | Node server and Cloudflare Module | The packed Nuxt consumer production-builds for both presets |
@@ -31,6 +31,11 @@ including request-scoped auth tokens and deployment to the Node server and
 Cloudflare Module Nitro presets. Anonymous queries can also be prerendered into
 static output and become live subscriptions after hydration. A browser Convex
 client is never constructed during SSR or prerendering.
+
+The automated browser support claim covers component disposal and route
+navigation, but not an application-root remount or source-file hot replacement.
+Those remain manual development checks until a repeatable browser fixture
+proves the exact lifecycle.
 
 Both packages are ESM-only. CommonJS `require()` is not supported. TypeScript
 must use a modern Node or bundler module-resolution mode capable of following

@@ -115,6 +115,24 @@ describe('shared playground probes', () => {
     })).rejects.toThrow('between 1 and 120 characters')
   })
 
+  it('rejects the optimistic probe without changing server data', async () => {
+    const t = convexTest(schema, modules)
+
+    await t.mutation(api.probes.record, {
+      label: 'Server value',
+      requestId: 'rollback-1',
+      surface: 'vue',
+    })
+
+    await expect(t.mutation(api.probes.rejectOptimistic, {
+      surface: 'vue',
+    })).rejects.toThrow('Intentional playground rejection')
+
+    const probes = await t.query(api.probes.list, { surface: 'vue' })
+    expect(probes).toHaveLength(1)
+    expect(probes[0]?.label).toBe('Server value')
+  })
+
   it('offers the same deterministic action contract to both clients', async () => {
     const t = convexTest(schema, modules)
 

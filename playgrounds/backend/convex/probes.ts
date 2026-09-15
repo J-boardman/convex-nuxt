@@ -108,6 +108,18 @@ export const record = mutation({
   },
 })
 
+export const rejectOptimistic = mutation({
+  args: {
+    surface: playgroundSurface,
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    void ctx
+    void args
+    throw new Error('Intentional playground rejection for optimistic rollback.')
+  },
+})
+
 export const roundTrip = action({
   args: {
     label: v.string(),

@@ -55,6 +55,7 @@ test('the integration crosses its complete live boundary', async ({
   const stamp = `${testInfo.project.name}-${Date.now()}`
   const labels = await seedBothSurfaces(stamp)
   const browserHttpQueries: string[] = []
+  const expectedRollbackErrors: string[] = []
   const runtimeErrors: string[] = []
   const webSockets: string[] = []
 
@@ -68,6 +69,12 @@ test('the integration crosses its complete live boundary', async ({
   })
   page.on('console', (message) => {
     const text = message.text()
+    const isExpectedRollback = text.includes('[CONVEX M(probes:rejectOptimistic)]')
+      && text.includes('Intentional playground rejection for optimistic rollback.')
+    if (isExpectedRollback) {
+      expectedRollbackErrors.push(text)
+      return
+    }
     const isRuntimeError = message.type() === 'error'
       && !text.startsWith('Failed to load resource:')
     if (isRuntimeError || /hydration/i.test(text)) {
@@ -112,6 +119,13 @@ test('the integration crosses its complete live boundary', async ({
   await page.getByTestId('query-surface').selectOption(surface.own)
   await expect(trace.getByText(mutationLabel, { exact: true })).toBeVisible()
 
+  await page.getByRole('button', { name: 'Prove optimistic rollback' }).click()
+  const optimisticState = page.getByTestId('optimistic-state')
+  await expect(optimisticState).toHaveAttribute('data-state', 'rolledBack')
+  await expect(optimisticState).toHaveAttribute('data-seen', 'true')
+  await expect(trace.getByText('Optimistic value awaiting rollback')).toHaveCount(0)
+  await expect(trace.getByText(mutationLabel, { exact: true })).toBeVisible()
+
   await page.getByRole('button', { name: 'Invoke action' }).click()
   await expect(page.getByText(/action \/ .*crossed the runtime boundary/i))
     .toBeVisible()
@@ -143,5 +157,6 @@ test('the integration crosses its complete live boundary', async ({
     expect(deploymentSockets()).toHaveLength(1)
   }
 
+  expect(expectedRollbackErrors).toHaveLength(1)
   expect(runtimeErrors).toEqual([])
 })

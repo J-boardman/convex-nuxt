@@ -44,6 +44,26 @@ onMounted(() => {
 const record: RecordNuxtProbe = import.meta.client
   ? useConvexMutation(api.probes.record)
   : async () => ({ created: false })
+const optimisticLabel = 'Optimistic value awaiting rollback'
+const optimisticSeen = ref(false)
+const optimisticState = ref<'idle' | 'pending' | 'rolledBack'>('idle')
+const rejectOptimistic = import.meta.client
+  ? useConvexMutation(api.probes.rejectOptimistic)
+      .withOptimisticUpdate((store, args) => {
+        const current = store.getQuery(api.probes.list, {
+          surface: args.surface,
+        })
+        if (!current?.length) return
+
+        store.setQuery(
+          api.probes.list,
+          { surface: args.surface },
+          current.map((probe, index) => index === current.length - 1
+            ? { ...probe, label: optimisticLabel }
+            : probe),
+        )
+      })
+  : undefined
 const roundTrip: RoundTripNuxtProbe = import.meta.client
   ? useConvexAction(api.probes.roundTrip)
   : async args => ({ ...args, runtime: 'action' })
@@ -56,6 +76,28 @@ const socketConnected = computed(() =>
 const connectionCount = computed(() =>
   hasMounted.value ? (connection?.value.connectionCount ?? 0) : 0,
 )
+watch(
+  () => probes.data,
+  value => {
+    if (value?.some(probe => probe.label === optimisticLabel)) {
+      optimisticSeen.value = true
+    }
+  },
+  { deep: true, flush: 'sync' },
+)
+
+async function proveOptimisticRollback() {
+  if (!rejectOptimistic) return
+
+  optimisticSeen.value = false
+  optimisticState.value = 'pending'
+  try {
+    await rejectOptimistic({ surface: 'nuxt' })
+  }
+  catch {
+    optimisticState.value = 'rolledBack'
+  }
+}
 </script>
 
 <template>
@@ -184,6 +226,23 @@ const connectionCount = computed(() =>
         >
           Retry same request
         </button>
+
+        <button
+          type="button"
+          :disabled="optimisticState === 'pending' || !probes.data?.length"
+          @click="proveOptimisticRollback"
+        >
+          Prove optimistic rollback
+        </button>
+        <div
+          class="operation-result"
+          data-testid="optimistic-state"
+          :data-seen="optimisticSeen"
+          :data-state="optimisticState"
+        >
+          <span>Optimistic update</span>
+          <strong>{{ optimisticSeen && optimisticState === 'rolledBack' ? 'observed and rolled back' : optimisticState }}</strong>
+        </div>
 
         <div class="action-probe">
           <button

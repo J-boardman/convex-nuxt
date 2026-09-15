@@ -10,7 +10,7 @@ import {
   useConvexPaginatedQuery,
   useConvexQuery,
 } from '@j-boardman/convex-vue'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useProbeOperations } from './useProbeOperations'
 
 const client = useConvexClient()
@@ -36,6 +36,22 @@ const paginatedProbes = useConvexPaginatedQuery(
   { initialNumItems: 3 },
 )
 const record = useConvexMutation(api.probes.record)
+const optimisticLabel = 'Optimistic value awaiting rollback'
+const optimisticSeen = ref(false)
+const optimisticState = ref<'idle' | 'pending' | 'rolledBack'>('idle')
+const rejectOptimistic = useConvexMutation(api.probes.rejectOptimistic)
+  .withOptimisticUpdate((store, args) => {
+    const current = store.getQuery(api.probes.list, { surface: args.surface })
+    if (!current?.length) return
+
+    store.setQuery(
+      api.probes.list,
+      { surface: args.surface },
+      current.map((probe, index) => index === current.length - 1
+        ? { ...probe, label: optimisticLabel }
+        : probe),
+    )
+  })
 const roundTrip = useConvexAction(api.probes.roundTrip)
 const {
   actionError,
@@ -50,6 +66,26 @@ const {
 } = useProbeOperations(record, roundTrip)
 
 const probeCount = computed(() => probes.data?.length ?? 0)
+watch(
+  () => probes.data,
+  value => {
+    if (value?.some(probe => probe.label === optimisticLabel)) {
+      optimisticSeen.value = true
+    }
+  },
+  { deep: true, flush: 'sync' },
+)
+
+async function proveOptimisticRollback() {
+  optimisticSeen.value = false
+  optimisticState.value = 'pending'
+  try {
+    await rejectOptimistic({ surface: 'vue' })
+  }
+  catch {
+    optimisticState.value = 'rolledBack'
+  }
+}
 </script>
 
 <template>
@@ -193,6 +229,23 @@ const probeCount = computed(() => probes.data?.length ?? 0)
         >
           Retry same request
         </button>
+
+        <button
+          type="button"
+          :disabled="optimisticState === 'pending' || !probes.data?.length"
+          @click="proveOptimisticRollback"
+        >
+          Prove optimistic rollback
+        </button>
+        <div
+          class="operation-result"
+          data-testid="optimistic-state"
+          :data-seen="optimisticSeen"
+          :data-state="optimisticState"
+        >
+          <span>Optimistic update</span>
+          <strong>{{ optimisticSeen && optimisticState === 'rolledBack' ? 'observed and rolled back' : optimisticState }}</strong>
+        </div>
 
         <div class="action-probe">
           <button type="button" :disabled="actionState === 'sending'" @click="sendAction">

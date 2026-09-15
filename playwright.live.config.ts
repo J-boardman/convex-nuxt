@@ -1,6 +1,7 @@
 import { defineConfig } from '@playwright/test'
 
 const convexUrl = process.env.CONVEX_URL
+const testUsers = process.env.CONVEX_TEST_USERS
 
 if (!convexUrl) {
   throw new Error(
@@ -28,7 +29,12 @@ export default defineConfig({
     },
     {
       name: 'nuxt-live',
-      use: { baseURL: 'http://127.0.0.1:4274' },
+      use: {
+        baseURL: 'http://127.0.0.1:4274',
+        extraHTTPHeaders: testUsers
+          ? { 'x-convex-test-user': 'alpha' }
+          : undefined,
+      },
     },
   ],
   webServer: [
@@ -40,7 +46,10 @@ export default defineConfig({
     },
     {
       command: 'pnpm --filter @j-boardman/convex-nuxt-playground exec nuxt dev --host 127.0.0.1 --port 4274',
-      env: { NUXT_PUBLIC_CONVEX_URL: convexUrl },
+      env: {
+        CONVEX_TEST_USERS: testUsers ?? '',
+        NUXT_PUBLIC_CONVEX_URL: convexUrl,
+      },
       reuseExistingServer: false,
       url: 'http://127.0.0.1:4274',
     },

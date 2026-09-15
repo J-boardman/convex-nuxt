@@ -120,6 +120,15 @@ export const rejectOptimistic = mutation({
   },
 })
 
+export const viewer = query({
+  args: {},
+  returns: v.union(v.null(), v.object({ subject: v.string() })),
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity()
+    return identity ? { subject: identity.subject } : null
+  },
+})
+
 export const roundTrip = action({
   args: {
     label: v.string(),

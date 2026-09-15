@@ -29,6 +29,7 @@ const queryArgs = computed<{ surface: 'vue' | 'nuxt' } | 'skip'>(() =>
 const probes = useConvexQuery(api.probes.list, queryArgs, {
   keepPreviousData: true,
 })
+const viewer = useConvexQuery(api.probes.viewer, {})
 const paginatedProbes = useConvexPaginatedQuery(
   api.probes.paginated,
   { surface: 'nuxt' },
@@ -128,7 +129,18 @@ async function proveOptimisticRollback() {
           <div><dt>Owner</dt><dd>Nuxt application</dd></div>
           <div><dt>Deployment</dt><dd>{{ deploymentUrl }}</dd></div>
           <div><dt>Closed</dt><dd>{{ clientClosed ? 'yes' : 'no' }}</dd></div>
-          <div><dt>Auth</dt><dd>{{ auth.state.status }}</dd></div>
+          <div>
+            <dt>Auth</dt>
+            <dd data-testid="auth-state" :data-state="auth.state.status">
+              {{ auth.state.status }}
+            </dd>
+          </div>
+          <div>
+            <dt>Viewer</dt>
+            <dd data-testid="viewer-subject">
+              {{ viewer.data?.subject ?? 'anonymous' }}
+            </dd>
+          </div>
           <div>
             <dt>Socket</dt>
             <dd>{{ socketConnected ? 'connected' : 'connecting' }}</dd>

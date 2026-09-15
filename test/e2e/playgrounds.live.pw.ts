@@ -50,6 +50,7 @@ async function seedBothSurfaces(stamp: string) {
 
 test('the integration crosses its complete live boundary', async ({
   page,
+  request,
 }, testInfo) => {
   const surface = surfaces[testInfo.project.name as keyof typeof surfaces]
   const stamp = `${testInfo.project.name}-${Date.now()}`
@@ -58,6 +59,30 @@ test('the integration crosses its complete live boundary', async ({
   const expectedRollbackErrors: string[] = []
   const runtimeErrors: string[] = []
   const webSockets: string[] = []
+  const alphaSubject = process.env.CONVEX_TEST_SUBJECT_ALPHA
+  const betaSubject = process.env.CONVEX_TEST_SUBJECT_BETA
+  const testUsers = process.env.CONVEX_TEST_USERS
+
+  if (surface.own === 'nuxt' && alphaSubject && betaSubject && testUsers) {
+    const users = JSON.parse(testUsers) as Record<'alpha' | 'beta', string>
+    const [alphaResponse, betaResponse] = await Promise.all([
+      request.get('/', { headers: { 'x-convex-test-user': 'alpha' } }),
+      request.get('/', { headers: { 'x-convex-test-user': 'beta' } }),
+    ])
+    const [alphaHtml, betaHtml] = await Promise.all([
+      alphaResponse.text(),
+      betaResponse.text(),
+    ])
+
+    expect(alphaHtml).toContain(alphaSubject)
+    expect(alphaHtml).not.toContain(betaSubject)
+    expect(betaHtml).toContain(betaSubject)
+    expect(betaHtml).not.toContain(alphaSubject)
+    for (const html of [alphaHtml, betaHtml]) {
+      expect(html).not.toContain(users.alpha)
+      expect(html).not.toContain(users.beta)
+    }
+  }
 
   page.on('request', (request) => {
     if (
@@ -84,6 +109,26 @@ test('the integration crosses its complete live boundary', async ({
   page.on('pageerror', error => runtimeErrors.push(error.message))
   page.on('websocket', socket => webSockets.push(socket.url()))
 
+  if (surface.own === 'nuxt' && alphaSubject) {
+    await page.addInitScript(() => {
+      const authStates: string[] = []
+      Object.defineProperty(window, '__convexAuthStates', { value: authStates })
+      const recordAuthState = () => {
+        const state = document
+          .querySelector('[data-testid="auth-state"]')
+          ?.getAttribute('data-state')
+        if (state && authStates.at(-1) !== state) authStates.push(state)
+      }
+      new MutationObserver(recordAuthState).observe(document, {
+        attributeFilter: ['data-state'],
+        attributes: true,
+        childList: true,
+        subtree: true,
+      })
+      document.addEventListener('DOMContentLoaded', recordAuthState)
+    })
+  }
+
   const response = await page.goto('/')
   const rawHtml = await response?.text()
   const pageItems = page.locator('.page-items li')
@@ -92,6 +137,20 @@ test('the integration crosses its complete live boundary', async ({
 
   if (surface.serverRendered) {
     expect(rawHtml).toContain(labels.nuxt[6])
+    if (alphaSubject) {
+      expect(rawHtml).toContain(alphaSubject)
+      await expect(page.getByTestId('auth-state'))
+        .toHaveAttribute('data-state', 'authenticated')
+      await expect(page.getByTestId('viewer-subject')).toHaveText(alphaSubject)
+      const authStates = await page.evaluate(() =>
+        (window as typeof window & { __convexAuthStates?: string[] })
+          .__convexAuthStates ?? [],
+      )
+      expect(authStates).toContain('authenticated')
+      expect(authStates).not.toContain('loading')
+      expect(authStates).not.toContain('unauthenticated')
+      expect(authStates).not.toContain('error')
+    }
     await expect(pageItems).toHaveCount(3)
     await expect(page.locator('main')).toHaveAttribute('data-hydrated', 'true')
     await loadMore.click()

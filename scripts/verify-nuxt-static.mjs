@@ -37,6 +37,7 @@ execFileSync(pnpm, [
   cwd: root,
   env: {
     ...process.env,
+    CONVEX_TEST_USERS: '',
     NUXT_PUBLIC_CONVEX_URL: convexUrl,
     NO_COLOR: '1',
   },

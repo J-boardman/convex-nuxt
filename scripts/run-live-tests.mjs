@@ -1,10 +1,16 @@
 import { spawn } from 'node:child_process'
+import { Buffer } from 'node:buffer'
+import {
+  generateKeyPairSync,
+  sign as signPayload,
+} from 'node:crypto'
 import {
   cp,
   copyFile,
   mkdtemp,
   rm,
   symlink,
+  writeFile,
 } from 'node:fs/promises'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
@@ -15,6 +21,68 @@ import { fileURLToPath } from 'node:url'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm'
+const authAudience = 'convex-nuxt-live'
+const authIssuer = 'https://convex-nuxt-live.test'
+const authKeyId = 'convex-nuxt-live-key'
+
+function encodeJson(value) {
+  return Buffer.from(JSON.stringify(value)).toString('base64url')
+}
+
+function createTestAuth() {
+  const { privateKey, publicKey } = generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+  })
+  const publicJwk = {
+    ...publicKey.export({ format: 'jwk' }),
+    alg: 'RS256',
+    kid: authKeyId,
+    use: 'sig',
+  }
+  const jwks = Buffer.from(JSON.stringify({ keys: [publicJwk] }))
+    .toString('base64')
+  const authConfig = `
+import type { AuthConfig } from 'convex/server'
+
+export default {
+  providers: [{
+    type: 'customJwt',
+    applicationID: '${authAudience}',
+    issuer: '${authIssuer}',
+    jwks: 'data:application/json;base64,${jwks}',
+    algorithm: 'RS256',
+  }],
+} satisfies AuthConfig
+`.trimStart()
+
+  const now = Math.floor(Date.now() / 1000)
+  const token = (subject) => {
+    const encoded = `${encodeJson({
+      alg: 'RS256',
+      kid: authKeyId,
+      typ: 'JWT',
+    })}.${encodeJson({
+      aud: authAudience,
+      exp: now + 3600,
+      iat: now,
+      iss: authIssuer,
+      sub: subject,
+    })}`
+    const signature = signPayload('RSA-SHA256', Buffer.from(encoded), privateKey)
+      .toString('base64url')
+    return `${encoded}.${signature}`
+  }
+
+  const subjects = { alpha: 'live-user-alpha', beta: 'live-user-beta' }
+  return {
+    authConfig,
+    subjects,
+    users: {
+      alpha: token(subjects.alpha),
+      beta: token(subjects.beta),
+    },
+  }
+}
 
 function run(command, args, options = {}) {
   return new Promise((resolveRun, rejectRun) => {
@@ -100,9 +168,19 @@ async function stopBackend(child) {
   })
 }
 
-async function runAgainst(convexUrl) {
+async function runAgainst(convexUrl, testAuth) {
   await run(pnpm, ['run', 'test:live:against'], {
-    env: { ...process.env, CONVEX_URL: convexUrl },
+    env: {
+      ...process.env,
+      ...(testAuth
+        ? {
+            CONVEX_TEST_SUBJECT_ALPHA: testAuth.subjects.alpha,
+            CONVEX_TEST_SUBJECT_BETA: testAuth.subjects.beta,
+            CONVEX_TEST_USERS: JSON.stringify(testAuth.users),
+          }
+        : {}),
+      CONVEX_URL: convexUrl,
+    },
   })
 }
 
@@ -117,6 +195,7 @@ else {
     const cloudPort = await reservePort()
     let sitePort = await reservePort()
     while (sitePort === cloudPort) sitePort = await reservePort()
+    const testAuth = createTestAuth()
 
     await cp(
       resolve(root, 'playgrounds/backend/convex'),
@@ -130,6 +209,10 @@ else {
     await copyFile(
       resolve(root, 'playgrounds/backend/package.json'),
       join(temporaryRoot, 'package.json'),
+    )
+    await writeFile(
+      join(temporaryRoot, 'convex/auth.config.ts'),
+      testAuth.authConfig,
     )
     await symlink(
       resolve(root, 'node_modules'),
@@ -157,7 +240,7 @@ else {
     })
 
     await waitForBackend(backend)
-    await runAgainst(`http://127.0.0.1:${cloudPort}`)
+    await runAgainst(`http://127.0.0.1:${cloudPort}`, testAuth)
   }
   finally {
     if (backend) await stopBackend(backend)

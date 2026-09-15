@@ -133,6 +133,15 @@ describe('shared playground probes', () => {
     expect(probes[0]?.label).toBe('Server value')
   })
 
+  it('derives the viewer from Convex auth rather than query arguments', async () => {
+    const t = convexTest(schema, modules)
+
+    await expect(t.query(api.probes.viewer, {})).resolves.toBeNull()
+    await expect(t.withIdentity({ subject: 'viewer-alpha' })
+      .query(api.probes.viewer, {}))
+      .resolves.toEqual({ subject: 'viewer-alpha' })
+  })
+
   it('offers the same deterministic action contract to both clients', async () => {
     const t = convexTest(schema, modules)
 

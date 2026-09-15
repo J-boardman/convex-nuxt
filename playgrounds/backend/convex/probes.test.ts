@@ -93,6 +93,28 @@ describe('shared playground probes', () => {
     expect(await t.query(api.probes.list, { surface: 'vue' })).toHaveLength(1)
   })
 
+  it('records both integration feeds in one transaction', async () => {
+    const t = convexTest(schema, modules)
+
+    await t.mutation(api.probes.recordAtomicPair, {
+      label: 'Atomic pair',
+      requestId: 'atomic-1',
+    })
+
+    const [vue, nuxt] = await Promise.all([
+      t.query(api.probes.list, { surface: 'vue' }),
+      t.query(api.probes.list, { surface: 'nuxt' }),
+    ])
+    expect(vue.at(-1)).toMatchObject({
+      label: 'Atomic pair',
+      requestId: 'atomic-1:vue',
+    })
+    expect(nuxt.at(-1)).toMatchObject({
+      label: 'Atomic pair',
+      requestId: 'atomic-1:nuxt',
+    })
+  })
+
   it('rejects conflicting retries and invalid labels', async () => {
     const t = convexTest(schema, modules)
 

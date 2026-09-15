@@ -29,6 +29,13 @@ declare const viewerQuery: FunctionReference<
   Record<string, never>,
   { name: string } | null
 >
+declare const generatedSurfaceQuery: FunctionReference<
+  'query',
+  'public',
+  { surface: 'vue' | 'nuxt' },
+  Array<{ label: string }>,
+  string | undefined
+>
 declare const paginatedMessagesQuery: FunctionReference<
   'query',
   'public',
@@ -58,6 +65,13 @@ expectTypeOf(queryMap.state.messages).toEqualTypeOf<
 >()
 expectTypeOf(queryMap.state.viewer).toEqualTypeOf<
   ConvexQueryState<{ name: string } | null>
+>()
+const generatedQueryMap = useConvexQueries({
+  nuxt: { query: generatedSurfaceQuery, args: { surface: 'nuxt' } },
+  vue: { query: generatedSurfaceQuery, args: { surface: 'vue' } },
+})
+expectTypeOf(generatedQueryMap.state.vue).toEqualTypeOf<
+  ConvexQueryState<Array<{ label: string }>>
 >()
 
 const paginatedMessages = useConvexPaginatedQuery(
@@ -91,10 +105,12 @@ useConvexQuery(messagesQuery, { channel: 42 })
 // @ts-expect-error only generated query references are accepted
 useConvexQuery('messages:list', { channel: 'general' })
 useConvexQueries({
-  // @ts-expect-error multi-query arguments retain their generated types
   invalid: {
     query: messagesQuery,
-    args: { channel: 42 },
+    args: {
+      // @ts-expect-error multi-query arguments retain their generated types
+      channel: 42,
+    },
   },
 })
 useConvexPaginatedQuery(

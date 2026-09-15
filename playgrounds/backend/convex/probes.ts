@@ -4,6 +4,7 @@ import {
 } from 'convex/server'
 import { v } from 'convex/values'
 import { action, mutation, query } from './_generated/server'
+import type { MutationCtx } from './_generated/server'
 
 const playgroundSurface = v.union(v.literal('vue'), v.literal('nuxt'))
 
@@ -23,6 +24,50 @@ function normalizeLabel(label: string) {
   }
 
   return normalized
+}
+
+async function recordProbe(
+  ctx: MutationCtx,
+  args: { label: string, requestId: string, surface: 'vue' | 'nuxt' },
+) {
+  const label = normalizeLabel(args.label)
+  const requestId = args.requestId.trim()
+
+  if (requestId.length === 0 || requestId.length > 120) {
+    throw new Error('Probe request IDs must contain between 1 and 120 characters.')
+  }
+
+  const existing = await ctx.db
+    .query('probes')
+    .withIndex('by_request_id', q => q.eq('requestId', requestId))
+    .unique()
+
+  if (existing) {
+    if (existing.label !== label || existing.surface !== args.surface) {
+      throw new Error('A probe request ID cannot describe two events.')
+    }
+
+    return { created: false, probeId: existing._id }
+  }
+
+  const retained = await ctx.db
+    .query('probes')
+    .withIndex('by_surface', q => q.eq('surface', args.surface))
+    .order('asc')
+    .take(25)
+
+  const oldest = retained[0]
+  if (oldest && retained.length === 25) {
+    await ctx.db.delete(oldest._id)
+  }
+
+  const probeId = await ctx.db.insert('probes', {
+    label,
+    requestId,
+    surface: args.surface,
+  })
+
+  return { created: true, probeId }
 }
 
 export const list = query({
@@ -67,44 +112,40 @@ export const record = mutation({
     probeId: v.id('probes'),
   }),
   handler: async (ctx, args) => {
-    const label = normalizeLabel(args.label)
+    return await recordProbe(ctx, args)
+  },
+})
+
+export const recordAtomicPair = mutation({
+  args: {
+    label: v.string(),
+    requestId: v.string(),
+  },
+  returns: v.object({
+    nuxtProbeId: v.id('probes'),
+    vueProbeId: v.id('probes'),
+  }),
+  handler: async (ctx, args) => {
     const requestId = args.requestId.trim()
-
-    if (requestId.length === 0 || requestId.length > 120) {
-      throw new Error('Probe request IDs must contain between 1 and 120 characters.')
+    if (requestId.length === 0 || requestId.length > 110) {
+      throw new Error('Atomic request IDs must contain between 1 and 110 characters.')
     }
 
-    const existing = await ctx.db
-      .query('probes')
-      .withIndex('by_request_id', (q) => q.eq('requestId', requestId))
-      .unique()
-
-    if (existing) {
-      if (existing.label !== label || existing.surface !== args.surface) {
-        throw new Error('A probe request ID cannot describe two events.')
-      }
-
-      return { created: false, probeId: existing._id }
-    }
-
-    const retained = await ctx.db
-      .query('probes')
-      .withIndex('by_surface', (q) => q.eq('surface', args.surface))
-      .order('asc')
-      .take(25)
-
-    const oldest = retained[0]
-    if (oldest && retained.length === 25) {
-      await ctx.db.delete(oldest._id)
-    }
-
-    const probeId = await ctx.db.insert('probes', {
-      label,
-      requestId,
-      surface: args.surface,
+    const vue = await recordProbe(ctx, {
+      label: args.label,
+      requestId: `${requestId}:vue`,
+      surface: 'vue',
+    })
+    const nuxt = await recordProbe(ctx, {
+      label: args.label,
+      requestId: `${requestId}:nuxt`,
+      surface: 'nuxt',
     })
 
-    return { created: true, probeId }
+    return {
+      nuxtProbeId: nuxt.probeId,
+      vueProbeId: vue.probeId,
+    }
   },
 })
 

@@ -35,6 +35,10 @@ const paginatedProbes = useConvexPaginatedQuery(
   { surface: 'nuxt' },
   { initialNumItems: 3 },
 )
+const atomicQueries = useConvexQueries({
+  nuxt: { query: api.probes.list, args: { surface: 'nuxt' } },
+  vue: { query: api.probes.list, args: { surface: 'vue' } },
+})
 const auth = useConvexAuth()
 const client = import.meta.client ? useConvexClient() : undefined
 const connection = import.meta.client ? useConvexConnectionState() : undefined
@@ -45,6 +49,12 @@ onMounted(() => {
 const record: RecordNuxtProbe = import.meta.client
   ? useConvexMutation(api.probes.record)
   : async () => ({ created: false })
+const recordAtomicPair = import.meta.client
+  ? useConvexMutation(api.probes.recordAtomicPair)
+  : undefined
+const atomicTarget = ref<string>()
+const atomicState = ref<'pending' | 'ready' | 'updating' | 'complete'>('pending')
+const atomicMixedSeen = ref(false)
 const optimisticLabel = 'Optimistic value awaiting rollback'
 const optimisticSeen = ref(false)
 const optimisticState = ref<'idle' | 'pending' | 'rolledBack'>('idle')
@@ -86,6 +96,40 @@ watch(
   },
   { deep: true, flush: 'sync' },
 )
+
+watch(
+  () => atomicQueries.state,
+  (state) => {
+    const vueLabel = state.vue.status === 'success'
+      ? state.vue.data.at(-1)?.label
+      : undefined
+    const nuxtLabel = state.nuxt.status === 'success'
+      ? state.nuxt.data.at(-1)?.label
+      : undefined
+
+    if (!atomicTarget.value) {
+      if (vueLabel !== undefined && nuxtLabel !== undefined) atomicState.value = 'ready'
+      return
+    }
+
+    const matches = [vueLabel, nuxtLabel]
+      .filter(label => label === atomicTarget.value)
+      .length
+    if (matches === 1) atomicMixedSeen.value = true
+    if (matches === 2) atomicState.value = 'complete'
+  },
+  { deep: true, flush: 'sync', immediate: true },
+)
+
+async function proveAtomicQueries() {
+  if (!recordAtomicPair) return
+
+  const requestId = crypto.randomUUID()
+  atomicTarget.value = `Atomic query pair ${requestId}`
+  atomicMixedSeen.value = false
+  atomicState.value = 'updating'
+  await recordAtomicPair({ label: atomicTarget.value, requestId })
+}
 
 async function proveOptimisticRollback() {
   if (!rejectOptimistic) return
@@ -254,6 +298,23 @@ async function proveOptimisticRollback() {
         >
           <span>Optimistic update</span>
           <strong>{{ optimisticSeen && optimisticState === 'rolledBack' ? 'observed and rolled back' : optimisticState }}</strong>
+        </div>
+
+        <button
+          type="button"
+          :disabled="atomicState === 'pending' || atomicState === 'updating'"
+          @click="proveAtomicQueries"
+        >
+          Prove atomic queries
+        </button>
+        <div
+          class="operation-result"
+          data-testid="atomic-query-state"
+          :data-mixed="atomicMixedSeen"
+          :data-state="atomicState"
+        >
+          <span>Dynamic queries</span>
+          <strong>{{ atomicState }}</strong>
         </div>
 
         <div class="action-probe">

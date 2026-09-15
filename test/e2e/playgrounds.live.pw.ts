@@ -185,6 +185,12 @@ test('the integration crosses its complete live boundary', async ({
   await page.getByTestId('query-surface').selectOption(surface.own)
   await expect(trace.getByText(mutationLabel, { exact: true })).toBeVisible()
 
+  const atomicState = page.getByTestId('atomic-query-state')
+  await expect(atomicState).toHaveAttribute('data-state', 'ready')
+  await page.getByRole('button', { name: 'Prove atomic queries' }).click()
+  await expect(atomicState).toHaveAttribute('data-state', 'complete')
+  await expect(atomicState).toHaveAttribute('data-mixed', 'false')
+
   await page.getByRole('button', { name: 'Prove optimistic rollback' }).click()
   const optimisticState = page.getByTestId('optimistic-state')
   await expect(optimisticState).toHaveAttribute('data-state', 'rolledBack')

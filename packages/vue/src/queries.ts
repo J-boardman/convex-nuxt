@@ -26,17 +26,15 @@ export interface RequestForConvexQuery<
 export type ConvexQueriesRequest = Record<string, RequestForConvexQuery>
 
 type ValidConvexQueries<Requests extends ConvexQueriesRequest> = {
-  [Identifier in keyof Requests]:
-  Requests[Identifier] extends RequestForConvexQuery<infer Query>
-    ? RequestForConvexQuery<Query>
-    : never
+  [Identifier in keyof Requests]: RequestForConvexQuery<
+    Requests[Identifier]['query']
+  >
 }
 
 export type ConvexQueriesState<Requests extends ConvexQueriesRequest> = {
-  readonly [Identifier in keyof Requests]:
-  Requests[Identifier] extends RequestForConvexQuery<infer Query>
-    ? ConvexQueryState<FunctionReturnType<Query>>
-    : never
+  readonly [Identifier in keyof Requests]: ConvexQueryState<
+    FunctionReturnType<Requests[Identifier]['query']>
+  >
 }
 
 export interface UseConvexQueriesResult<Requests extends ConvexQueriesRequest> {

@@ -34,6 +34,10 @@ const paginatedProbes = useConvexPaginatedQuery(
 const auth = useConvexAuth()
 const client = import.meta.client ? useConvexClient() : undefined
 const connection = import.meta.client ? useConvexConnectionState() : undefined
+const hasMounted = ref(false)
+onMounted(() => {
+  hasMounted.value = true
+})
 const record: RecordNuxtProbe = import.meta.client
   ? useConvexMutation(api.probes.record)
   : async () => ({ created: false })
@@ -44,9 +48,11 @@ const operations = useNuxtProbeOperations(record, roundTrip)
 const probeCount = computed(() => probes.data?.length ?? 0)
 const clientClosed = computed(() => client?.closed ?? false)
 const socketConnected = computed(() =>
-  connection?.value.isWebSocketConnected ?? false,
+  hasMounted.value && (connection?.value.isWebSocketConnected ?? false),
 )
-const connectionCount = computed(() => connection?.value.connectionCount ?? 0)
+const connectionCount = computed(() =>
+  hasMounted.value ? (connection?.value.connectionCount ?? 0) : 0,
+)
 </script>
 
 <template>

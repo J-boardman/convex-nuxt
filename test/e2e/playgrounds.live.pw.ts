@@ -54,6 +54,7 @@ test('the integration crosses its complete live boundary', async ({
   const stamp = `${testInfo.project.name}-${Date.now()}`
   const labels = await seedBothSurfaces(stamp)
   const browserHttpQueries: string[] = []
+  const runtimeErrors: string[] = []
   const webSockets: string[] = []
 
   page.on('request', (request) => {
@@ -64,6 +65,15 @@ test('the integration crosses its complete live boundary', async ({
       browserHttpQueries.push(request.url())
     }
   })
+  page.on('console', (message) => {
+    const text = message.text()
+    const isRuntimeError = message.type() === 'error'
+      && !text.startsWith('Failed to load resource:')
+    if (isRuntimeError || /hydration/i.test(text)) {
+      runtimeErrors.push(text)
+    }
+  })
+  page.on('pageerror', error => runtimeErrors.push(error.message))
   page.on('websocket', socket => webSockets.push(socket.url()))
 
   const response = await page.goto('/')
@@ -110,4 +120,5 @@ test('the integration crosses its complete live boundary', async ({
   expect(loadedBefore).toBeGreaterThanOrEqual(3)
   await page.getByRole('button', { name: 'Load three more' }).click()
   await expect(pageItems).toHaveCount(loadedBefore + 3)
+  expect(runtimeErrors).toEqual([])
 })

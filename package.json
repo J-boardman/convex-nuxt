@@ -24,7 +24,7 @@
     "test:e2e": "playwright test",
     "test:module": "vitest run test/nuxt",
     "test:package": "node scripts/verify-packages.mjs",
-    "test:live": "node scripts/run-live-tests.mjs",
+    "test:live": "pnpm build && node scripts/run-live-tests.mjs",
     "test:live:against": "pnpm run test:live:browser && pnpm run test:live:static",
     "test:live:browser": "playwright test --config playwright.live.config.ts",
     "test:live:static": "node scripts/verify-nuxt-static.mjs",

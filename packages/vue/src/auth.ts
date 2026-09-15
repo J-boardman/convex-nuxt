@@ -4,6 +4,7 @@ import {
   shallowRef,
   watch,
 } from 'vue'
+import type { ConvexClient } from 'convex/browser'
 import { useConvexSsrBridge } from './adapter/ssr.js'
 import { useConvexRuntime } from './plugin.js'
 
@@ -42,6 +43,19 @@ function errorFrom(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error))
 }
 
+function clearClientAuth(
+  client: ConvexClient,
+  onChange: (isAuthenticated: boolean) => void,
+): void {
+  // ConvexClient does not expose clearAuth(), but its public base client does.
+  // Clear before setAuth() pauses the socket so the server receives the
+  // anonymous identity transition. setAuth() then owns timer cleanup.
+  if (client.getAuth()) {
+    client.client.clearAuth()
+  }
+  client.setAuth(async () => null, onChange)
+}
+
 export function setupConvexAuth(
   provider: () => ConvexAuthProvider,
   options: SetupConvexAuthOptions = {},
@@ -68,10 +82,23 @@ export function setupConvexAuth(
       : { status: 'unauthenticated' }
     : { status: 'loading' }
   const state = shallowRef<ConvexAuthState>(initialState)
+  let confirmedAuthentication = initialAuth?.isAuthenticated
   let generation = 0
   let providerHasSettled = false
   let hasAuthSeed = Boolean(initialAuth)
   let stopped = false
+
+  const publishConfirmation = (isAuthenticated: boolean): void => {
+    const authenticationChanged = confirmedAuthentication !== undefined
+      && confirmedAuthentication !== isAuthenticated
+    confirmedAuthentication = isAuthenticated
+    state.value = isAuthenticated
+      ? { status: 'authenticated' }
+      : { status: 'unauthenticated' }
+    if (authenticationChanged) {
+      runtime.authEpoch.value += 1
+    }
+  }
 
   const stopSeedWatch = authSeed
     ? watch(
@@ -109,8 +136,18 @@ export function setupConvexAuth(
       const preserveSeedUntilConfirmation = hasAuthSeed && !providerHasSettled
       providerHasSettled = true
       if (!snapshot.isAuthenticated) {
-        state.value = { status: 'unauthenticated' }
-        runtime.client?.setAuth(async () => null, () => {})
+        if (!runtime.client) {
+          state.value = { status: 'unauthenticated' }
+          return
+        }
+        state.value = { status: 'loading' }
+        clearClientAuth(
+          runtime.client,
+          (isAuthenticated) => {
+            if (stopped || authGeneration !== generation) return
+            publishConfirmation(isAuthenticated)
+          },
+        )
         return
       }
 
@@ -131,9 +168,7 @@ export function setupConvexAuth(
         },
         (isAuthenticated) => {
           if (stopped || authGeneration !== generation) return
-          state.value = isAuthenticated
-            ? { status: 'authenticated' }
-            : { status: 'unauthenticated' }
+          publishConfirmation(isAuthenticated)
         },
       )
     },
@@ -161,7 +196,7 @@ export function setupConvexAuth(
       stopWatching()
       stopSeedWatch?.()
       if (runtime.client && !runtime.client.closed) {
-        runtime.client.setAuth(async () => null, () => {})
+        clearClientAuth(runtime.client, () => {})
       }
       if (runtime.auth === controller) {
         runtime.auth = undefined

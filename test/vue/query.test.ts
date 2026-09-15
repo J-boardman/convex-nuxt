@@ -176,6 +176,33 @@ describe('useConvexQuery', () => {
     expect(result.state).toEqual({ status: 'success', data: ['second'] })
   })
 
+  it('drops prior data and resubscribes across an auth boundary', () => {
+    const harness = createHarness()
+    const result = withinHarness(harness, () =>
+      useConvexQuery(
+        messagesQuery,
+        { channel: 'general' },
+        { keepPreviousData: true },
+      ),
+    )
+    harness.subscriptions[0]?.update(['signed-in'])
+
+    withinHarness(harness, useConvexRuntime).authEpoch.value += 1
+
+    expect(harness.subscriptions[0]?.unsubscribe).toHaveBeenCalledOnce()
+    expect(harness.subscriptions).toHaveLength(2)
+    expect(result.state).toEqual({ status: 'pending' })
+
+    harness.subscriptions[0]?.update(['obsolete'])
+    expect(result.state).toEqual({ status: 'pending' })
+
+    harness.subscriptions[1]?.update(['anonymous'])
+    expect(result.state).toEqual({
+      status: 'success',
+      data: ['anonymous'],
+    })
+  })
+
   it('uses initial data only for the initial argument set', async () => {
     const harness = createHarness()
     const channel = ref('general')

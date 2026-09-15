@@ -147,6 +147,27 @@ describe('useConvexQueries', () => {
     })
   })
 
+  it('restarts every query without retaining auth-bound results', async () => {
+    const harness = createHarness()
+    const result = withinHarness(harness, () => useConvexQueries({
+      general: { query: messagesQuery, args: { channel: 'general' } },
+      random: { query: messagesQuery, args: { channel: 'random' } },
+    }))
+    harness.subscriptions[0]?.update(['signed-in general'])
+    harness.subscriptions[1]?.update(['signed-in random'])
+    await Promise.resolve()
+
+    withinHarness(harness, useConvexRuntime).authEpoch.value += 1
+
+    expect(harness.subscriptions[0]?.unsubscribe).toHaveBeenCalledOnce()
+    expect(harness.subscriptions[1]?.unsubscribe).toHaveBeenCalledOnce()
+    expect(harness.subscriptions).toHaveLength(4)
+    expect(result.state).toEqual({
+      general: { status: 'pending' },
+      random: { status: 'pending' },
+    })
+  })
+
   it('disposes every active subscription with its Vue scope', () => {
     const harness = createHarness()
     withinHarness(harness, () => useConvexQueries({

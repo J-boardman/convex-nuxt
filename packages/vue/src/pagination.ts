@@ -199,6 +199,7 @@ export function useConvexPaginatedQuery<
     initialState(seededData),
   )
   let currentKey: string | undefined
+  let currentAuthEpoch: number | undefined
   let generation = 0
   let hasStarted = false
   let invalidCursorResetAvailable = true
@@ -306,8 +307,8 @@ export function useConvexPaginatedQuery<
     : undefined
 
   const stopWatching = watch(
-    () => toValue(argsInput),
-    (input) => {
+    [() => toValue(argsInput), runtime.authEpoch],
+    ([input, authEpoch]) => {
       if (stopped) return
 
       let normalized: NormalizedArgs | NormalizedSkip
@@ -319,6 +320,7 @@ export function useConvexPaginatedQuery<
       catch (cause) {
         generation += 1
         currentKey = undefined
+        currentAuthEpoch = authEpoch
         stopSubscription()
         state.value = {
           status: 'error',
@@ -332,28 +334,39 @@ export function useConvexPaginatedQuery<
         seedActive = false
         generation += 1
         currentKey = undefined
+        currentAuthEpoch = authEpoch
         queuedLoadMore = undefined
         stopSubscription()
         state.value = { status: 'skipped', results: [] }
         hasStarted = true
         return
       }
-      if (normalized.key === currentKey) return
+      if (
+        normalized.key === currentKey
+        && authEpoch === currentAuthEpoch
+      ) return
 
+      const authenticationChanged = currentAuthEpoch !== undefined
+        && authEpoch !== currentAuthEpoch
       const previous = resultsFromState(state.value)
-      if (normalized.key !== initialKey) {
+      if (normalized.key !== initialKey || authenticationChanged) {
         seedActive = false
       }
       generation += 1
       currentKey = normalized.key
+      currentAuthEpoch = authEpoch
       queuedLoadMore = undefined
       invalidCursorResetAvailable = true
       stopSubscription()
 
-      if (!hasStarted && seededData) {
+      if (!hasStarted && seededData && !authenticationChanged) {
         state.value = initialState(seededData)
       }
-      else if (options.keepPreviousData && previous.length > 0) {
+      else if (
+        !authenticationChanged
+        && options.keepPreviousData
+        && previous.length > 0
+      ) {
         state.value = { status: 'stale', results: previous }
       }
       else {

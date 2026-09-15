@@ -16,7 +16,10 @@ import { describe, expect, it, vi } from 'vitest'
 import { installConvexSsrBridge } from '../../packages/vue/src/adapter/ssr.js'
 import type { ConvexSsrBridge } from '../../packages/vue/src/adapter/ssr.js'
 import { useConvexPaginatedQuery } from '../../packages/vue/src/pagination.js'
-import { createConvexVuePlugin } from '../../packages/vue/src/plugin.js'
+import {
+  createConvexVuePlugin,
+  useConvexRuntime,
+} from '../../packages/vue/src/plugin.js'
 
 interface Message {
   body: string
@@ -193,6 +196,30 @@ describe('useConvexPaginatedQuery', () => {
       clientResult('Exhausted', [{ body: 'obsolete', id: 2 }]),
     )
     expect(result.results).toEqual(firstPage)
+  })
+
+  it('drops prior pages and restarts across an auth boundary', () => {
+    const harness = createHarness()
+    const result = withinHarness(harness, () =>
+      useConvexPaginatedQuery(
+        messagesQuery,
+        { channel: 'general' },
+        { initialNumItems: 3, keepPreviousData: true },
+      ),
+    )
+    const firstPage = [{ body: 'signed-in', id: 1 }]
+    harness.subscriptions[0]?.update(clientResult('Exhausted', firstPage))
+
+    withinHarness(harness, useConvexRuntime).authEpoch.value += 1
+
+    expect(harness.subscriptions[0]?.unsubscribe).toHaveBeenCalledOnce()
+    expect(harness.subscriptions).toHaveLength(2)
+    expect(result.state).toEqual({ status: 'pending', results: [] })
+
+    harness.subscriptions[0]?.update(
+      clientResult('Exhausted', [{ body: 'obsolete', id: 2 }]),
+    )
+    expect(result.results).toEqual([])
   })
 
   it('restarts once when Convex rejects a pagination cursor', () => {

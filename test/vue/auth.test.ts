@@ -23,13 +23,27 @@ interface AuthRegistration {
 
 function createAuthHarness(initialProvider: ConvexAuthProvider) {
   const registrations: AuthRegistration[] = []
+  let hasAuth = false
+  const clearAuth = vi.fn(() => {
+    hasAuth = false
+  })
   const client = {
+    client: { clearAuth },
     closed: false,
     close: vi.fn(async () => {}),
+    getAuth: vi.fn(() => hasAuth
+      ? { decoded: {}, token: 'token' }
+      : undefined),
     setAuth: vi.fn((
       fetchToken: AuthRegistration['fetchToken'],
       onChange: AuthRegistration['onChange'],
-    ) => registrations.push({ fetchToken, onChange })),
+    ) => registrations.push({
+      fetchToken,
+      onChange: (isAuthenticated) => {
+        hasAuth = isAuthenticated
+        onChange(isAuthenticated)
+      },
+    })),
   } as unknown as ConvexClient
   const app = createSSRApp({})
   app.use(createConvexVuePlugin({
@@ -39,7 +53,7 @@ function createAuthHarness(initialProvider: ConvexAuthProvider) {
   const provider = ref(initialProvider)
   const scope = effectScope()
 
-  return { app, client, provider, registrations, scope }
+  return { app, clearAuth, client, provider, registrations, scope }
 }
 
 function installAuth(
@@ -94,7 +108,11 @@ describe('Convex authentication', () => {
       isLoading: false,
     })
     const auth = installAuth(harness)
+    const runtime = harness.app.runWithContext(useConvexRuntime)
     const authenticatedRegistration = harness.registrations[0]
+
+    authenticatedRegistration?.onChange(true)
+    expect(runtime.authEpoch.value).toBe(0)
 
     harness.provider.value = {
       fetchAccessToken: vi.fn(async () => null),
@@ -103,8 +121,13 @@ describe('Convex authentication', () => {
     }
     authenticatedRegistration?.onChange(true)
 
-    expect(auth?.state).toEqual({ status: 'unauthenticated' })
+    expect(auth?.state).toEqual({ status: 'loading' })
     expect(harness.registrations).toHaveLength(2)
+
+    harness.registrations[1]?.onChange(false)
+    expect(auth?.state).toEqual({ status: 'unauthenticated' })
+    expect(runtime.authEpoch.value).toBe(1)
+    expect(harness.clearAuth).toHaveBeenCalledOnce()
   })
 
   it('retains an SSR auth seed until the provider settles', () => {
@@ -123,6 +146,8 @@ describe('Convex authentication', () => {
       isLoading: false,
     }
 
+    expect(auth?.state).toEqual({ status: 'loading' })
+    harness.registrations[0]?.onChange(false)
     expect(auth?.state).toEqual({ status: 'unauthenticated' })
   })
 

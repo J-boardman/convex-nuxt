@@ -1,7 +1,7 @@
 import { ConvexClient } from 'convex/browser'
 import type { ConvexClientOptions } from 'convex/browser'
-import { inject } from 'vue'
-import type { App, InjectionKey, Plugin } from 'vue'
+import { inject, shallowRef } from 'vue'
+import type { App, InjectionKey, Plugin, ShallowRef } from 'vue'
 import type { ConvexAuthController } from './auth.js'
 
 export type ConvexVueClientOptions = Omit<ConvexClientOptions, 'disabled'>
@@ -14,6 +14,7 @@ export interface ConvexVueOptions {
 /** @internal */
 export interface ConvexVueRuntime {
   auth?: ConvexAuthController
+  authEpoch: ShallowRef<number>
   client: ConvexClient | null
   close: () => Promise<void>
   querySubscriptionsStarted: boolean
@@ -80,6 +81,7 @@ export function createConvexVuePlugin(
       let closePromise: Promise<void> | undefined
 
       const runtime: ConvexVueRuntime = {
+        authEpoch: shallowRef(0),
         client,
         close(): Promise<void> {
           closePromise ??= (async () => {

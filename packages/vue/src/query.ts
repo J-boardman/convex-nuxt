@@ -149,6 +149,7 @@ export function useConvexQuery<Query extends FunctionReference<'query'>>(
   const state = shallowRef<ConvexQueryState<QueryResult>>({ status: 'pending' })
   const waiters = new Set<SuspenseWaiter<QueryResult>>()
   let currentKey: string | undefined
+  let currentAuthEpoch: number | undefined
   let generation = 0
   let hasStarted = false
   let stopped = false
@@ -199,8 +200,8 @@ export function useConvexQuery<Query extends FunctionReference<'query'>>(
     : undefined
 
   const stopWatching = watch(
-    () => toValue(argsInput),
-    (input) => {
+    [() => toValue(argsInput), runtime.authEpoch],
+    ([input, authEpoch]) => {
       if (stopped) return
 
       let normalized: NormalizedArgs | NormalizedSkip
@@ -210,6 +211,7 @@ export function useConvexQuery<Query extends FunctionReference<'query'>>(
       catch (cause) {
         generation += 1
         currentKey = undefined
+        currentAuthEpoch = authEpoch
         stopSubscription()
         publish({
           status: 'error',
@@ -223,29 +225,40 @@ export function useConvexQuery<Query extends FunctionReference<'query'>>(
         seedActive = false
         generation += 1
         currentKey = undefined
+        currentAuthEpoch = authEpoch
         stopSubscription()
         publish({ status: 'skipped' })
         hasStarted = true
         return
       }
 
-      if (normalized.key === currentKey) {
+      if (
+        normalized.key === currentKey
+        && authEpoch === currentAuthEpoch
+      ) {
         return
       }
 
+      const authenticationChanged = currentAuthEpoch !== undefined
+        && authEpoch !== currentAuthEpoch
       const previousData = dataFromState(state.value)
-      if (normalized.key !== initialKey) {
+      if (normalized.key !== initialKey || authenticationChanged) {
         seedActive = false
       }
       generation += 1
       const subscriptionGeneration = generation
       currentKey = normalized.key
+      currentAuthEpoch = authEpoch
       stopSubscription()
 
-      if (!hasStarted && initialData !== undefined) {
+      if (!hasStarted && initialData !== undefined && !authenticationChanged) {
         publish({ status: 'success', data: initialData })
       }
-      else if (options.keepPreviousData && previousData !== undefined) {
+      else if (
+        !authenticationChanged
+        && options.keepPreviousData
+        && previousData !== undefined
+      ) {
         publish({ status: 'stale', data: previousData })
       }
       else {

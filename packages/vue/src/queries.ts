@@ -78,8 +78,8 @@ export function useConvexQueries<Requests extends ConvexQueriesRequest>(
   }
 
   const stopWatching = watch(
-    () => toValue(requestsInput),
-    (requests) => {
+    [() => toValue(requestsInput), runtime.authEpoch],
+    ([requests, authEpoch]) => {
       if (stopped) return
       if (!requests || Array.isArray(requests) || typeof requests !== 'object') {
         throw new TypeError('useConvexQueries() requires a keyed query request object.')
@@ -87,7 +87,7 @@ export function useConvexQueries<Requests extends ConvexQueriesRequest>(
 
       const normalized = Object.entries(requests).map(([identifier, request]) => ({
         identifier,
-        identity: queryIdentity(request),
+        identity: `${authEpoch}:${queryIdentity(request)}`,
         request,
       }))
 

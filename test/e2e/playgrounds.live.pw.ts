@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { ConvexHttpClient } from 'convex/browser'
 import { api } from '../../playgrounds/backend/convex/_generated/api.js'
+import { belongsToConvexDeployment } from './live-deployment'
 
 const convexUrl = process.env.CONVEX_URL
 
@@ -92,7 +93,7 @@ test('the integration crosses its complete live boundary', async ({
   await expect(trace.getByText(labels[surface.own][6]!, { exact: true })).toBeVisible()
   expect(browserHttpQueries).toEqual([])
   await expect.poll(
-    () => webSockets.some(url => new URL(url).port === '3210'),
+    () => webSockets.some(url => belongsToConvexDeployment(url, convexUrl)),
   ).toBe(true)
 
   await page.getByTestId('query-enabled').uncheck()

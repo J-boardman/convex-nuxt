@@ -57,8 +57,10 @@ test('the integration crosses its complete live boundary', async ({
   const labels = await seedBothSurfaces(stamp)
   const browserHttpQueries: string[] = []
   const expectedRollbackErrors: string[] = []
+  const openWebSockets = new Map<number, string>()
   const runtimeErrors: string[] = []
   const webSockets: string[] = []
+  let webSocketId = 0
   const alphaSubject = process.env.CONVEX_TEST_SUBJECT_ALPHA
   const betaSubject = process.env.CONVEX_TEST_SUBJECT_BETA
   const testUsers = process.env.CONVEX_TEST_USERS
@@ -108,7 +110,13 @@ test('the integration crosses its complete live boundary', async ({
     }
   })
   page.on('pageerror', error => runtimeErrors.push(error.message))
-  page.on('websocket', socket => webSockets.push(socket.url()))
+  page.on('websocket', (socket) => {
+    const id = webSocketId
+    webSocketId += 1
+    webSockets.push(socket.url())
+    openWebSockets.set(id, socket.url())
+    socket.on('close', () => openWebSockets.delete(id))
+  })
 
   if (surface.own === 'nuxt' && alphaSubject) {
     await page.addInitScript(() => {
@@ -251,6 +259,34 @@ test('the integration crosses its complete live boundary', async ({
     items.map(item => (item as HTMLElement).dataset.probeId),
   )
   expect(new Set(probeIds).size).toBe(probeIds.length)
+
+  if (surface.own === 'vue') {
+    const deploymentSocketCount = () => [...openWebSockets.values()]
+      .filter(url => belongsToConvexDeployment(url, convexUrl))
+      .length
+
+    expect(deploymentSocketCount()).toBe(1)
+    await page.evaluate(() => {
+      const remount = (window as typeof window & {
+        __remountConvexPlayground?: () => void
+      }).__remountConvexPlayground
+      if (!remount) throw new Error('Vue remount probe is unavailable.')
+      remount()
+    })
+
+    await expect(queryState).toHaveAttribute('data-state', 'success')
+    await expect(trace.getByText(mutationLabel, { exact: true })).toBeVisible()
+    await expect.poll(() => webSockets.filter(url =>
+      belongsToConvexDeployment(url, convexUrl),
+    ).length).toBe(2)
+    await expect.poll(deploymentSocketCount).toBe(1)
+
+    const remountLabel = `vue remount mutation ${stamp}`
+    await page.getByLabel('Event label').fill(remountLabel)
+    await page.getByRole('button', { name: 'Record mutation' }).click()
+    await expect(page.getByText('created one event', { exact: true })).toBeVisible()
+    await expect(trace.getByText(remountLabel, { exact: true })).toBeVisible()
+  }
 
   if (surface.own === 'nuxt') {
     const deploymentSockets = () => webSockets.filter(url =>

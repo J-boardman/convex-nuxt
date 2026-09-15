@@ -15,6 +15,6 @@ if (deploymentUrl) {
 
 <template>
   <NuxtRouteAnnouncer />
-  <ConfiguredBench v-if="deploymentUrl" :deployment-url="deploymentUrl" />
+  <NuxtPage v-if="deploymentUrl" />
   <SetupRequired v-else />
 </template>

@@ -16,6 +16,9 @@ import type {
 
 defineProps<{
   deploymentUrl: string
+  destination: string
+  destinationLabel: string
+  routeName: string
 }>()
 
 const queryEnabled = ref(true)
@@ -59,8 +62,12 @@ const connectionCount = computed(() =>
   <main class="shell">
     <header class="masthead">
       <p class="overline">Nuxt integration playground</p>
-      <p>runtime / 002</p>
+      <p>runtime / 002 · {{ routeName }}</p>
     </header>
+
+    <nav aria-label="Nuxt route probe">
+      <NuxtLink :to="destination">{{ destinationLabel }}</NuxtLink>
+    </nav>
 
     <section class="hero" aria-labelledby="page-title">
       <div>

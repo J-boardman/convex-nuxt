@@ -121,5 +121,27 @@ test('the integration crosses its complete live boundary', async ({
   expect(loadedBefore).toBeGreaterThanOrEqual(3)
   await page.getByRole('button', { name: 'Load three more' }).click()
   await expect(pageItems).toHaveCount(loadedBefore + 3)
+
+  if (surface.own === 'nuxt') {
+    const deploymentSockets = () => webSockets.filter(url =>
+      belongsToConvexDeployment(url, convexUrl),
+    )
+
+    expect(deploymentSockets()).toHaveLength(1)
+    await page.getByRole('link', { name: 'Open alternate route' }).click()
+    await expect(page).toHaveURL('/alternate')
+    await expect(page.getByText('runtime / 002 · alternate route')).toBeVisible()
+    await expect(queryState).toHaveAttribute('data-state', 'success')
+    await expect(trace.getByText(mutationLabel, { exact: true })).toBeVisible()
+    expect(browserHttpQueries).toEqual([])
+    expect(deploymentSockets()).toHaveLength(1)
+
+    await page.getByRole('link', { name: 'Open primary route' }).click()
+    await expect(page).toHaveURL('/')
+    await expect(page.getByText('runtime / 002 · primary route')).toBeVisible()
+    await expect(queryState).toHaveAttribute('data-state', 'success')
+    expect(deploymentSockets()).toHaveLength(1)
+  }
+
   expect(runtimeErrors).toEqual([])
 })

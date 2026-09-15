@@ -291,7 +291,12 @@ async function proveOptimisticRollback() {
       </ol>
     </section>
 
-    <section class="signal-panel pagination-panel" aria-labelledby="pagination-title">
+    <section
+      class="signal-panel pagination-panel"
+      aria-labelledby="pagination-title"
+      data-testid="pagination-state"
+      :data-state="paginatedProbes.state.status"
+    >
       <div class="panel-heading">
         <div>
           <p class="eyebrow">Reactive pagination</p>
@@ -302,7 +307,11 @@ async function proveOptimisticRollback() {
 
       <div class="pagination-body">
         <ol v-if="paginatedProbes.results.length" class="page-items">
-          <li v-for="probe in paginatedProbes.results" :key="probe._id">
+          <li
+            v-for="probe in paginatedProbes.results"
+            :key="probe._id"
+            :data-probe-id="probe._id"
+          >
             <strong>{{ probe.label }}</strong>
             <code>{{ probe.requestId.slice(0, 8) }}</code>
           </li>

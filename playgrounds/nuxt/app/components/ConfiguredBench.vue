@@ -101,7 +101,7 @@ async function proveOptimisticRollback() {
 </script>
 
 <template>
-  <main class="shell">
+  <main class="shell" :data-hydrated="hasMounted">
     <header class="masthead">
       <p class="overline">Nuxt integration playground</p>
       <p>runtime / 002 · {{ routeName }}</p>
@@ -274,7 +274,12 @@ async function proveOptimisticRollback() {
       </ol>
     </section>
 
-    <section class="pagination-panel" aria-labelledby="pagination-title">
+    <section
+      class="pagination-panel"
+      aria-labelledby="pagination-title"
+      data-testid="pagination-state"
+      :data-state="paginatedProbes.state.status"
+    >
       <div>
         <p class="overline">Reactive pagination</p>
         <h2 id="pagination-title">Incremental event window</h2>
@@ -284,7 +289,11 @@ async function proveOptimisticRollback() {
         </p>
       </div>
       <ol v-if="paginatedProbes.results.length" class="page-items">
-        <li v-for="probe in paginatedProbes.results" :key="probe._id">
+        <li
+          v-for="probe in paginatedProbes.results"
+          :key="probe._id"
+          :data-probe-id="probe._id"
+        >
           <strong>{{ probe.label }}</strong>
           <code>{{ probe.requestId.slice(0, 8) }}</code>
         </li>

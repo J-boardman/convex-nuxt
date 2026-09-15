@@ -86,9 +86,16 @@ test('the integration crosses its complete live boundary', async ({
 
   const response = await page.goto('/')
   const rawHtml = await response?.text()
+  const pageItems = page.locator('.page-items li')
+  const paginationState = page.getByTestId('pagination-state')
+  const loadMore = page.getByRole('button', { name: 'Load three more' })
 
   if (surface.serverRendered) {
     expect(rawHtml).toContain(labels.nuxt[6])
+    await expect(pageItems).toHaveCount(3)
+    await expect(page.locator('main')).toHaveAttribute('data-hydrated', 'true')
+    await loadMore.click()
+    await expect(pageItems).toHaveCount(6)
   }
   else {
     expect(rawHtml).not.toContain(labels.vue[6])
@@ -130,11 +137,22 @@ test('the integration crosses its complete live boundary', async ({
   await expect(page.getByText(/action \/ .*crossed the runtime boundary/i))
     .toBeVisible()
 
-  const pageItems = page.locator('.page-items li')
-  const loadedBefore = await pageItems.count()
-  expect(loadedBefore).toBeGreaterThanOrEqual(3)
-  await page.getByRole('button', { name: 'Load three more' }).click()
-  await expect(pageItems).toHaveCount(loadedBefore + 3)
+  await expect(pageItems).not.toHaveCount(0)
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    if (await paginationState.getAttribute('data-state') === 'exhausted') break
+
+    const loadedBefore = await pageItems.count()
+    await loadMore.click()
+    await expect.poll(async () =>
+      await paginationState.getAttribute('data-state') === 'exhausted'
+      || await pageItems.count() > loadedBefore,
+    ).toBe(true)
+  }
+  await expect(paginationState).toHaveAttribute('data-state', 'exhausted')
+  const probeIds = await pageItems.evaluateAll(items =>
+    items.map(item => (item as HTMLElement).dataset.probeId),
+  )
+  expect(new Set(probeIds).size).toBe(probeIds.length)
 
   if (surface.own === 'nuxt') {
     const deploymentSockets = () => webSockets.filter(url =>

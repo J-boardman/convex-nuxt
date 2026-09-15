@@ -126,6 +126,27 @@ describe('Convex authentication', () => {
     expect(auth?.state).toEqual({ status: 'unauthenticated' })
   })
 
+  it('keeps an authenticated SSR seed while the browser token is confirmed', () => {
+    const harness = createAuthHarness({
+      fetchAccessToken: vi.fn(async () => null),
+      isAuthenticated: false,
+      isLoading: true,
+    })
+    const auth = installAuth(harness, { isAuthenticated: true })
+
+    harness.provider.value = {
+      fetchAccessToken: vi.fn(async () => 'browser-token'),
+      isAuthenticated: true,
+      isLoading: false,
+    }
+
+    expect(auth?.state).toEqual({ status: 'authenticated' })
+    expect(harness.registrations).toHaveLength(1)
+
+    harness.registrations[0]?.onChange(true)
+    expect(auth?.state).toEqual({ status: 'authenticated' })
+  })
+
   it('adopts an asynchronous adapter seed while the provider is loading', () => {
     const harness = createAuthHarness({
       fetchAccessToken: vi.fn(async () => null),

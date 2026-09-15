@@ -96,8 +96,8 @@ function useAuthAsyncData(
 ): NuxtAuthAsyncData {
   return useAsyncData(key, handler, {
     deep: false,
-    immediate: executeOnServer,
-    server: true,
+    immediate: true,
+    server: executeOnServer,
   })
 }
 

@@ -106,6 +106,7 @@ export function setupConvexAuth(
         return
       }
 
+      const preserveSeedUntilConfirmation = hasAuthSeed && !providerHasSettled
       providerHasSettled = true
       if (!snapshot.isAuthenticated) {
         state.value = { status: 'unauthenticated' }
@@ -113,7 +114,9 @@ export function setupConvexAuth(
         return
       }
 
-      state.value = { status: 'loading' }
+      if (!preserveSeedUntilConfirmation) {
+        state.value = { status: 'loading' }
+      }
       runtime.client?.setAuth(
         async ({ forceRefreshToken }) => {
           try {

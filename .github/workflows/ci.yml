@@ -36,3 +36,20 @@ jobs:
 
       - name: Verify repository
         run: pnpm verify
+
+  live:
+    name: Verify live Convex behavior
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install pnpm and Node.js
+        uses: pnpm/setup@v2
+        with:
+          cache: true
+          require-lockfile: true
+          runtime: node@24
+
+      - name: Verify disposable deployment behavior
+        run: pnpm test:live

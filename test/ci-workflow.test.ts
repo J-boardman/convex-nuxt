@@ -12,5 +12,7 @@ describe('continuous integration workflow', () => {
     expect(workflow).toContain('require-lockfile: true')
     expect(workflow).toContain('          - 22\n          - 24')
     expect(workflow).toContain('run: pnpm verify')
+    expect(workflow).toContain('name: Verify live Convex behavior')
+    expect(workflow).toContain('run: pnpm test:live')
   })
 })

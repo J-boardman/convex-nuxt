@@ -13,6 +13,7 @@ import type {
   RecordNuxtProbe,
   RoundTripNuxtProbe,
 } from '../composables/useNuxtProbeOperations'
+import { convexAuthProbeKey } from '../auth-probe'
 
 defineProps<{
   deploymentUrl: string
@@ -40,6 +41,7 @@ const atomicQueries = useConvexQueries({
   vue: { query: api.probes.list, args: { surface: 'vue' } },
 })
 const auth = useConvexAuth()
+const authProbe = inject(convexAuthProbeKey)
 const client = import.meta.client ? useConvexClient() : undefined
 const connection = import.meta.client ? useConvexConnectionState() : undefined
 const hasMounted = ref(false)
@@ -131,6 +133,18 @@ async function proveAtomicQueries() {
   await recordAtomicPair({ label: atomicTarget.value, requestId })
 }
 
+async function refreshAuthProbe() {
+  await authProbe?.refresh()
+}
+
+async function switchAuthProbe() {
+  await authProbe?.signIn('beta')
+}
+
+async function signInAuthProbe() {
+  await authProbe?.signIn('alpha')
+}
+
 async function proveOptimisticRollback() {
   if (!rejectOptimistic) return
 
@@ -186,11 +200,31 @@ async function proveOptimisticRollback() {
             </dd>
           </div>
           <div>
+            <dt>Client identity</dt>
+            <dd data-testid="client-auth-subject">
+              {{ String(client?.getAuth()?.decoded.sub ?? 'anonymous') }}
+            </dd>
+          </div>
+          <div>
             <dt>Socket</dt>
             <dd>{{ socketConnected ? 'connected' : 'connecting' }}</dd>
           </div>
           <div><dt>Reconnects</dt><dd>{{ connectionCount }}</dd></div>
         </dl>
+        <div v-if="authProbe" class="auth-probe-controls">
+          <p
+            data-testid="auth-probe-session"
+            :data-fetch-count="authProbe.tokenFetchCount.value"
+            :data-user="authProbe.activeUser.value"
+          >
+            {{ authProbe.activeUser.value }} ·
+            {{ authProbe.tokenFetchCount.value }} token fetches
+          </p>
+          <button type="button" @click="refreshAuthProbe">Refresh session</button>
+          <button type="button" @click="switchAuthProbe">Switch to beta</button>
+          <button type="button" @click="authProbe.signOut">Sign out</button>
+          <button type="button" @click="signInAuthProbe">Sign in as alpha</button>
+        </div>
       </aside>
     </section>
 

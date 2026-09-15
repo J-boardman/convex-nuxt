@@ -64,7 +64,7 @@ test('the integration crosses its complete live boundary', async ({
   const testUsers = process.env.CONVEX_TEST_USERS
 
   if (surface.own === 'nuxt' && alphaSubject && betaSubject && testUsers) {
-    const users = JSON.parse(testUsers) as Record<'alpha' | 'beta', string>
+    const users = JSON.parse(testUsers) as Record<string, string>
     const [alphaResponse, betaResponse] = await Promise.all([
       request.get('/', { headers: { 'x-convex-test-user': 'alpha' } }),
       request.get('/', { headers: { 'x-convex-test-user': 'beta' } }),
@@ -79,8 +79,9 @@ test('the integration crosses its complete live boundary', async ({
     expect(betaHtml).toContain(betaSubject)
     expect(betaHtml).not.toContain(alphaSubject)
     for (const html of [alphaHtml, betaHtml]) {
-      expect(html).not.toContain(users.alpha)
-      expect(html).not.toContain(users.beta)
+      for (const token of Object.values(users)) {
+        expect(html).not.toContain(token)
+      }
     }
   }
 
@@ -137,6 +138,7 @@ test('the integration crosses its complete live boundary', async ({
 
   if (surface.serverRendered) {
     expect(rawHtml).toContain(labels.nuxt[6])
+    await expect(page.locator('main')).toHaveAttribute('data-hydrated', 'true')
     if (alphaSubject) {
       expect(rawHtml).toContain(alphaSubject)
       await expect(page.getByTestId('auth-state'))
@@ -150,9 +152,40 @@ test('the integration crosses its complete live boundary', async ({
       expect(authStates).not.toContain('loading')
       expect(authStates).not.toContain('unauthenticated')
       expect(authStates).not.toContain('error')
+
+      const authSession = page.getByTestId('auth-probe-session')
+      const initialFetchCount = Number(
+        await authSession.getAttribute('data-fetch-count'),
+      )
+      await page.getByRole('button', { name: 'Refresh session' }).click()
+      await expect(authSession).toHaveAttribute('data-user', 'alphaRefresh')
+      await expect.poll(async () => Number(
+        await authSession.getAttribute('data-fetch-count'),
+      )).toBeGreaterThan(initialFetchCount)
+      await expect(page.getByTestId('auth-state'))
+        .toHaveAttribute('data-state', 'authenticated')
+      await expect(page.getByTestId('viewer-subject')).toHaveText(alphaSubject)
+
+      await page.getByRole('button', { name: 'Switch to beta' }).click()
+      await expect(authSession).toHaveAttribute('data-user', 'beta')
+      await expect(page.getByTestId('viewer-subject')).toHaveText(betaSubject)
+      await expect(page.getByTestId('auth-state'))
+        .toHaveAttribute('data-state', 'authenticated')
+
+      await page.getByRole('button', { name: 'Sign out' }).click()
+      await expect(authSession).toHaveAttribute('data-user', 'signedOut')
+      await expect(page.getByTestId('auth-state'))
+        .toHaveAttribute('data-state', 'unauthenticated')
+      await expect(page.getByTestId('client-auth-subject')).toHaveText('anonymous')
+      await expect(page.getByTestId('viewer-subject')).toHaveText('anonymous')
+
+      await page.getByRole('button', { name: 'Sign in as alpha' }).click()
+      await expect(authSession).toHaveAttribute('data-user', 'alpha')
+      await expect(page.getByTestId('auth-state'))
+        .toHaveAttribute('data-state', 'authenticated')
+      await expect(page.getByTestId('viewer-subject')).toHaveText(alphaSubject)
     }
     await expect(pageItems).toHaveCount(3)
-    await expect(page.locator('main')).toHaveAttribute('data-hydrated', 'true')
     await loadMore.click()
     await expect(pageItems).toHaveCount(6)
   }

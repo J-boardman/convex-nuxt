@@ -56,7 +56,7 @@ export default {
 `.trimStart()
 
   const now = Math.floor(Date.now() / 1000)
-  const token = (subject) => {
+  const token = (subject, session) => {
     const encoded = `${encodeJson({
       alg: 'RS256',
       kid: authKeyId,
@@ -66,6 +66,7 @@ export default {
       exp: now + 3600,
       iat: now,
       iss: authIssuer,
+      jti: session,
       sub: subject,
     })}`
     const signature = signPayload('RSA-SHA256', Buffer.from(encoded), privateKey)
@@ -78,8 +79,9 @@ export default {
     authConfig,
     subjects,
     users: {
-      alpha: token(subjects.alpha),
-      beta: token(subjects.beta),
+      alpha: token(subjects.alpha, 'alpha-initial'),
+      alphaRefresh: token(subjects.alpha, 'alpha-refresh'),
+      beta: token(subjects.beta, 'beta-initial'),
     },
   }
 }

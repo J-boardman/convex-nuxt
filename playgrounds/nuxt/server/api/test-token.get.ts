@@ -4,7 +4,10 @@ export default defineEventHandler((event) => {
     string,
     string
   >
-  const requestedUser = getHeader(event, 'x-convex-test-user')
+  const queryUser = getQuery(event).user
+  const requestedUser = typeof queryUser === 'string'
+    ? queryUser
+    : getHeader(event, 'x-convex-test-user')
   const token = requestedUser ? users[requestedUser] : undefined
 
   if (!token) {

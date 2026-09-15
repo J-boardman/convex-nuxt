@@ -1,11 +1,38 @@
 <script setup lang="ts">
 import { setupConvexAuth } from '@j-boardman/convex-nuxt/runtime'
+import {
+  convexAuthProbeKey,
+  type AuthProbeUser,
+} from './auth-probe'
 
 const config = useRuntimeConfig()
 const deploymentUrl = String(config.public.convexPlaygroundUrl)
 const authProbeEnabled = Boolean(config.public.convexAuthProbeEnabled)
 const browserToken = ref<string | null>(null)
 const browserTokenLoading = ref(authProbeEnabled)
+const activeTestUser = ref<AuthProbeUser | 'signedOut'>('alpha')
+const tokenFetchCount = ref(0)
+
+async function loadTestUser(user: AuthProbeUser) {
+  const response = await $fetch<{ token: string }>('/api/test-token', {
+    query: { user },
+  })
+  browserToken.value = response.token
+  activeTestUser.value = user
+}
+
+provide(convexAuthProbeKey, authProbeEnabled
+  ? {
+      activeUser: readonly(activeTestUser),
+      tokenFetchCount: readonly(tokenFetchCount),
+      refresh: () => loadTestUser('alphaRefresh'),
+      signIn: loadTestUser,
+      signOut: () => {
+        activeTestUser.value = 'signedOut'
+        browserToken.value = null
+      },
+    }
+  : undefined)
 
 let serverToken: (() => Promise<string | null>) | undefined
 if (import.meta.server && authProbeEnabled) {
@@ -18,8 +45,7 @@ if (import.meta.server && authProbeEnabled) {
 if (import.meta.client && authProbeEnabled) {
   onMounted(async () => {
     try {
-      const response = await $fetch<{ token: string }>('/api/test-token')
-      browserToken.value = response.token
+      await loadTestUser('alpha')
     }
     finally {
       browserTokenLoading.value = false
@@ -29,7 +55,10 @@ if (import.meta.client && authProbeEnabled) {
 
 if (deploymentUrl) {
   setupConvexAuth(() => ({
-    fetchAccessToken: async () => browserToken.value,
+    fetchAccessToken: async () => {
+      tokenFetchCount.value += 1
+      return browserToken.value
+    },
     isAuthenticated: browserToken.value !== null,
     isLoading: browserTokenLoading.value,
   }), { serverToken })

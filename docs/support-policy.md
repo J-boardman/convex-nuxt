@@ -9,7 +9,7 @@ same as it being supported.
 | Surface | Supported floor | Current verification |
 | --- | --- | --- |
 | Vue | Vue 3.5 | Source typecheck, clean packed Vite consumer, production build, and generic SSR seed render |
-| Nuxt | Nuxt 4.5 | Module fixture, generated types, clean packed production consumer, and runtime installation tests |
+| Nuxt | Nuxt 4.5 | Module fixture, generated types, packed production consumer, live SSR hydration, and static generation |
 | Convex | Convex 1.45 | Unit fakes exercise its public client contracts; packed consumers install the declared peer |
 | Node.js | Node 22 | CI runs the complete repository gate on Node 22 and 24 |
 | Browser | Chrome | Playwright launches the system Chrome channel against both playgrounds; local verification uses Chrome 143 |
@@ -28,8 +28,9 @@ payload transport is the responsibility of a framework adapter.
 
 `@j-boardman/convex-nuxt` supports Nuxt server rendering and client rendering,
 including request-scoped auth tokens and deployment to the Node server and
-Cloudflare Module Nitro presets. A browser Convex client is never constructed
-during SSR.
+Cloudflare Module Nitro presets. Anonymous queries can also be prerendered into
+static output and become live subscriptions after hydration. A browser Convex
+client is never constructed during SSR or prerendering.
 
 Both packages are ESM-only. CommonJS `require()` is not supported. TypeScript
 must use a modern Node or bundler module-resolution mode capable of following
@@ -44,7 +45,6 @@ The following are not supported merely because they may compile:
 - Convex releases older than 1.45;
 - Bun or Deno as the build and server runtime;
 - Firefox, Safari, or WebKit-specific browser behavior;
-- static generation or prerendered Nuxt output;
 - additional Nitro presets not named above;
 - multiple Convex deployments inside one Vue application; and
 - automatic SSR for Vue meta-frameworks other than Nuxt.

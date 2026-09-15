@@ -54,8 +54,9 @@ states, mutations, actions, optimistic updates, pagination, auth, connection
 state, teardown, remounting, and HMR.
 
 The Nuxt playground exercises the same shared behavior plus server-rendered
-HTML, payload reuse, hydration, authenticated SSR, client navigation, SSG,
-server helpers, and concurrent request isolation.
+HTML, payload reuse, hydration, static generation, and server helpers. Focused
+tests cover authenticated SSR state and concurrent request isolation without
+putting credentials in the browser fixture.
 
 The shared Convex playground backend supplies deterministic query, pagination,
 auth, action, transaction, error, and unusual-value cases. Tests that require a
@@ -82,7 +83,7 @@ details.
 | `pnpm test:e2e` | Run deterministic Vue and Nuxt browser tests. |
 | `pnpm test:package` | Pack, inspect, install, and build both npm tarballs. |
 | `pnpm test` | Run the complete deterministic, credential-free local suite. |
-| `pnpm test:live` | Exercise a real Convex deployment in protected CI. |
+| `pnpm test:live` | Exercise live browser behavior and static generation against the supplied Convex URL. |
 | `pnpm verify` | Typecheck, lint, build, and run the local suite. |
 | `pnpm changeset` | Record release intent for a package-facing change. |
 | `pnpm preview` | Publish both packages to `pkg.pr.new` from CI. |
@@ -106,8 +107,9 @@ Tracked POSIX shell hooks live in `.githooks`. The private root package's
 - `pre-push` runs `pnpm test`. The suite is deterministic and requires no npm
   credentials or hosted Convex secrets.
 
-CI repeats every local gate because hooks can be bypassed. Networked live tests
-run in protected CI and again before publication.
+CI repeats every local gate because hooks can be bypassed. Deployment-backed
+live tests require an explicit `CONVEX_URL`; run them against a disposable local
+backend or a protected CI deployment before publication.
 
 ## Versioning and previews
 

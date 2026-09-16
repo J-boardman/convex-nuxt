@@ -1,6 +1,6 @@
 # Convex for Vue and Nuxt: design and implementation record
 
-Status: accepted; pre-release implementation in progress
+Status: implemented; pre-release verification complete
 
 Date: 2026-09-02
 
@@ -278,10 +278,8 @@ type QueryState<T> =
 
 interface UseConvexQueryOptions<T> {
   server?: boolean                 // default: bridge setting; true in Nuxt, false in a Vue SPA
-  lazy?: boolean                   // default: false
   keepPreviousData?: boolean       // default: false
   initialData?: T                  // manual seed for libraries/client-only cases
-  throwOnError?: boolean           // default: false
 }
 
 interface UseConvexQueryResult<T> {
@@ -502,7 +500,6 @@ interface ConvexSsrBridge {
     readonly pending: Readonly<Ref<boolean>>
   }
   useAuthSeed(request: {
-    provider: () => ConvexAuthProvider
     serverToken?: () => Promise<string | null>
   }): {
     readonly initialState: Readonly<Ref<{ isAuthenticated: boolean } | undefined>>
@@ -510,7 +507,14 @@ interface ConvexSsrBridge {
 }
 ```
 
-The actual adapter also has a paginated seed operation with the same lifecycle. `useAuthSeed` lets the Nuxt implementation store the lazy token provider in H3 request context while returning only a serializable authenticated/unauthenticated seed. The port describes state, not Nuxt primitives: `useAsyncData`, H3, payload encoding, and request tokens remain behind the Nuxt implementation. The exact synchronous registration shape is subject to the phase-zero `useAsyncData` probe; the public composable must not become `async` merely to satisfy the bridge.
+Pagination reuses the same query-seed operation for its first page.
+`useAuthSeed` lets the Nuxt implementation store the lazy token provider in H3
+request context while returning only a serializable
+authenticated/unauthenticated seed. The port describes state, not Nuxt
+primitives: `useAsyncData`, H3, payload encoding, and request tokens remain
+behind the Nuxt implementation. The implemented bridge synchronously registers
+`useAsyncData`; the public composables remain synchronous while their
+`suspense()` methods expose asynchronous completion.
 
 ### Browser client lifecycle
 
@@ -702,7 +706,9 @@ Publish as `@j-boardman/convex-vue` and `@j-boardman/convex-nuxt`. Both packages
 
 The Vue package declares `vue` and `convex` as peer dependencies. The Nuxt package declares `nuxt`, `vue`, and `convex` as peers and the matching Vue integration as an exact dependency. Choose the peer-version floors from the fixture matrix; do not copy ranges from an older integration without proof. A package test must cover an application that also names the Vue package directly and confirm the package manager resolves one runtime instance.
 
-Target Nuxt 4.x first. Keep the runtime compatible with Nuxt 3.17+ where the same public primitives exist, and ship Nuxt 3 support only after the same package tarball passes the Nuxt 3 fixture suite. Declare the tested range rather than assuming `@nuxt/kit` compatibility.
+The supported Nuxt floor is 4.5. Nuxt 3 remains outside the peer range and
+support matrix until the same package tarball passes a dedicated Nuxt 3
+fixture; apparent `@nuxt/kit` compatibility is not treated as evidence.
 
 ## Feature-parity status
 
@@ -771,7 +777,9 @@ The onmax repository confirms that users want both Vue and Nuxt entry points, bu
 - Browser client requested on the server: throw and point to `createConvexHttpClient`, or `useConvexHttpClient` inside Nuxt.
 - Duplicate auth setup or different deployment URL: throw; silent reuse is unsafe.
 - Query errors: enter `error` state and keep the subscription alive for a later recovery.
-- SSR query error: populate the same error state. `throwOnError` optionally hands it to Nuxt's error boundary.
+- SSR query error: populate the same explicit error state as a live query.
+  Nuxt error-boundary integration is deferred until a consumer-facing contract
+  is designed and tested.
 - Auth token fetch error: enter auth `error`, rethrow to Convex, and never log the token.
 - Pagination invalid cursor: warn once in development, reset, and retry from the first page.
 
@@ -832,9 +840,9 @@ Test controllers with a deterministic fake client:
 Install the packed Vue tarball into clean consumers:
 
 - a current Vue 3 + Vite SPA;
-- a minimum-supported Vue 3 fixture;
-- a generic Vue server-renderer fixture that explicitly transports `initialData`; and
-- a fixture that intentionally installs a mismatched or duplicated package and verifies the diagnostic.
+- a generic Vue server-renderer fixture that explicitly transports
+  `initialData`; and
+- an import-resolution fixture for the root, adapter, and server entries.
 
 Validate explicit imports, plugin installation, production tree-shaking, app unmount, Vite HMR, auth, live updates, pagination, and the absence of Nuxt/H3 code in the bundle.
 
@@ -843,9 +851,6 @@ Validate explicit imports, plugin installation, production tree-shaking, app unm
 Build the packed tarball into clean Nuxt fixtures, not a workspace-linked source tree:
 
 - current Nuxt 4 with SSR;
-- minimum supported Nuxt 4;
-- Nuxt 3.17+ candidate fixture;
-- SPA mode;
 - prerender/SSG; and
 - an edge-style Nitro preset without Node `AsyncLocalStorage`.
 
@@ -880,7 +885,11 @@ Use Playwright against the Vue and Nuxt fixtures and a controlled Convex test de
 - inspect client output for server-only modules and tokens; and
 - inspect the final diff and rendered design/API docs.
 
-## Phased implementation
+Exact older floors, Nuxt 3, additional browsers, and additional Nitro presets
+are candidate fixtures. They expand the support matrix only after becoming
+required CI jobs; they are not implied by the current peer ranges.
+
+## Phased implementation record
 
 ### Phase 0: falsification spikes
 
@@ -891,9 +900,14 @@ Build throwaway, focused probes before scaffolding the full public API:
 3. Prove a dependent auth plugin calls `setAuth` before page query subscriptions.
 4. Prove an H3 event token remains isolated under concurrent SSR in the target Nitro presets.
 5. Prove one packed Vue runtime works when imported directly by Vite and when installed through the packed Nuxt module, with one injection key and one `ConvexClient`.
-6. Prove the intended Nuxt 3 and 4 floors, and measure the extra package/build/test overhead behind the standalone-Vue estimate.
+6. Choose the initial Nuxt floor from packed evidence. The result is Nuxt 4.5;
+   Nuxt 3 remains explicitly unsupported rather than inferred from shared
+   primitives.
 
-If probe 1 cannot preserve a synchronous public composable, replace the `useAsyncData` implementation behind the bridge with a Nuxt payload reducer/reviver plus `onServerPrefetch`; do not make only the Nuxt call site asynchronous. If probe 2 fails, use the Svelte pattern of `client.query` followed by subscription. Do not commit to either fallback before the probe supplies evidence.
+The probes preserved a synchronous public composable with `useAsyncData`, so
+the payload-reducer fallback was unnecessary. Client navigation uses the
+Svelte-proven `client.query` followed by a live subscription and does not route
+through a Nitro endpoint.
 
 ### Phase 1: shared Vue live core
 
@@ -917,7 +931,8 @@ Exit criterion: the anonymous Nuxt SSR-to-live flow and writes meet the definiti
 - Request-scoped server token helper.
 - Shared Vue auth controller and `setupConvexAuth`, plus Nuxt SSR state seed and backend confirmation.
 - Authenticated query and concurrent-request isolation fixtures.
-- Adapter authoring guide with one real provider example.
+- Adapter authoring guide with Convex Auth v2 as the first-party reference,
+  including its current alpha boundary.
 
 Exit criterion: authenticated SSR has no auth gap, no flash, and no request leakage.
 
@@ -931,9 +946,11 @@ Exit criterion: immediate post-hydration `loadMore`, exhaustion, argument change
 ### Phase 5: React-parity surface and release hardening
 
 - `useConvexQueries` with one atomic state snapshot.
-- Auth rendering components if they materially improve Vue templates.
-- Framework-neutral paginated optimistic helpers.
-- Nuxt 3 compatibility decision from the fixture evidence.
+- Defer auth rendering components because `useConvexAuth` already provides a
+  concise, single-owner template state.
+- Defer paginated optimistic helpers while retaining ordinary Convex-native
+  optimistic mutations.
+- Keep Nuxt 3 unsupported until a packed fixture supplies evidence.
 - Documentation, migration guide, package naming/ownership, release automation, and support policy.
 
 Exit criterion: the parity table is updated from observed package behavior, all claimed rows have a consumer-facing test, and no unsupported row is described as complete.
@@ -953,20 +970,22 @@ Other rejected approaches:
 - **Use only `ConvexHttpClient` through Nitro endpoints.** This gives up direct live subscriptions, optimistic updates, and fast client navigation.
 - **Use TanStack Query as the primary cache.** It adds a second cache and cannot improve Convex's transactionally consistent live stream. It can remain an opt-in ecosystem integration.
 
-## Open decisions
+## Resolved release decisions
 
-These do not block the phase-zero probes:
-
-1. Exact supported Nuxt floor. Recommendation: Nuxt 4 first, Nuxt 3 only after fixture proof.
-2. Whether `throwOnError` belongs in M1 or should wait for real error-boundary usage.
-3. Whether dynamic `useConvexQueries` is small enough for M1. Recommendation: keep it in M2 until single-query SSR/auth is proven.
-4. Whether specialized auth components are worth the public surface in Vue, where a template condition on `useConvexAuth` is already concise.
-5. Whether multiple deployments have a named early adopter. Without one, keep the one-deployment invariant.
-6. Whether a second meta-framework needs an automatic SSR adapter in the first stable release. Recommendation: no; stabilize the port through Nuxt and generic Vue's manual seed first.
+1. Nuxt 4.5 is the first supported floor. Nuxt 3 is not in the peer range.
+2. `throwOnError` is not in the first public API; errors remain explicit query
+   state until an error-boundary contract has real usage evidence.
+3. Dynamic `useConvexQueries` is included and publishes one atomic state
+   snapshot.
+4. Specialized auth rendering components are deferred; templates branch on
+   `useConvexAuth` without adding another state owner.
+5. One deployment per Vue application remains an enforced invariant.
+6. Nuxt is the only automatic meta-framework adapter. Generic Vue SSR uses the
+   manual seed contract, and another framework requires its own proven bridge.
 
 ## Migration notes from community packages
 
-A migration guide should map familiar names while making changed behavior explicit:
+The migration guide maps familiar names while making changed behavior explicit:
 
 | Existing API | New API | Important difference |
 | --- | --- | --- |
@@ -986,4 +1005,5 @@ Do not silently preserve the old `server` option behavior. Document and test tha
 - Convex React/core: [React overview](https://docs.convex.dev/client/react/overview), [React API](https://docs.convex.dev/api/modules/react), [`ConvexClient`](https://docs.convex.dev/api/classes/browser.ConvexClient), [source](https://github.com/get-convex/convex-js).
 - Existing community integrations: [Nuxt docs](https://docs.convex.dev/client/vue/nuxt), [`convex-nuxt`](https://github.com/chris-visser/convex-nuxt), [`convex-vue`](https://github.com/chris-visser/convex-vue).
 - Newer two-package community implementation: [`onmax/nuxt-convex`](https://github.com/onmax/nuxt-convex).
+- Convex Auth v2: [documentation](https://labs.convex.dev/auth), [source](https://github.com/get-convex/convex-auth), and the local [adapter guide](./auth-adapters.md).
 - Nuxt: [`useAsyncData`](https://nuxt.com/docs/4.x/api/composables/use-async-data), [data fetching and payload serialization](https://nuxt.com/docs/4.x/getting-started/data-fetching), [plugins and dependency ordering](https://nuxt.com/docs/4.x/directory-structure/app/plugins), [`useRequestEvent`](https://nuxt.com/docs/4.x/api/composables/use-request-event), [module authoring](https://nuxt.com/docs/4.x/guide/going-further/modules), [auto-import kit](https://nuxt.com/docs/4.x/api/kit/autoimports).

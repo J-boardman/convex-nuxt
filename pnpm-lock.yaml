@@ -124,6 +124,9 @@ importers:
       '@j-boardman/convex-playground-backend':
         specifier: workspace:*
         version: link:../backend
+      '@j-boardman/convex-playground-shared':
+        specifier: workspace:*
+        version: link:../shared
       convex:
         specifier: 1.45.0
         version: 1.45.0
@@ -134,11 +137,27 @@ importers:
         specifier: 3.5.42
         version: 3.5.42(typescript@5.9.3)
 
+  playgrounds/shared:
+    devDependencies:
+      vue:
+        specifier: 3.5.42
+        version: 3.5.42(typescript@5.9.3)
+      vue-tsc:
+        specifier: 3.3.11
+        version: 3.3.11(typescript@5.9.3)
+    peerDependencies:
+      vue:
+        specifier: ^3.5.0
+        version: 3.5.42(typescript@5.9.3)
+
   playgrounds/vue:
     dependencies:
       '@j-boardman/convex-playground-backend':
         specifier: workspace:*
         version: link:../backend
+      '@j-boardman/convex-playground-shared':
+        specifier: workspace:*
+        version: link:../shared
       '@j-boardman/convex-vue':
         specifier: workspace:*
         version: link:../../packages/vue

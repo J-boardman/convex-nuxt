@@ -90,7 +90,7 @@ details.
 | Script | Contract |
 | --- | --- |
 | `pnpm dev:prepare` | Generate module stubs and playground types. |
-| `pnpm dev` | Run the backend, Vue playground, and Nuxt playground together. |
+| `pnpm dev` | Run the backend and both playgrounds against its generated URL. |
 | `pnpm dev:backend` | Run only the shared Convex backend. |
 | `pnpm dev:vue` | Run only the Vue playground. |
 | `pnpm dev:nuxt` | Run only the Nuxt playground. |

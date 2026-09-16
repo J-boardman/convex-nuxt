@@ -11,6 +11,7 @@ if (!convexUrl) {
 
 const surfaces = {
   'nuxt-live': {
+    diagnosticPath: '/__diagnostics',
     own: 'nuxt' as const,
     other: 'vue' as const,
     queryState: '.query-state',
@@ -18,6 +19,7 @@ const surfaces = {
     traceName: 'Nuxt event trace',
   },
   'vue-live': {
+    diagnosticPath: '/__diagnostics',
     own: 'vue' as const,
     other: 'nuxt' as const,
     queryState: '.query-status',
@@ -68,8 +70,12 @@ test('the integration crosses its complete live boundary', async ({
   if (surface.own === 'nuxt' && alphaSubject && betaSubject && testUsers) {
     const users = JSON.parse(testUsers) as Record<string, string>
     const [alphaResponse, betaResponse] = await Promise.all([
-      request.get('/', { headers: { 'x-convex-test-user': 'alpha' } }),
-      request.get('/', { headers: { 'x-convex-test-user': 'beta' } }),
+      request.get(surface.diagnosticPath, {
+        headers: { 'x-convex-test-user': 'alpha' },
+      }),
+      request.get(surface.diagnosticPath, {
+        headers: { 'x-convex-test-user': 'beta' },
+      }),
     ])
     const [alphaHtml, betaHtml] = await Promise.all([
       alphaResponse.text(),
@@ -138,9 +144,7 @@ test('the integration crosses its complete live boundary', async ({
     })
   }
 
-  const response = await page.goto(
-    surface.own === 'vue' ? '/__diagnostics' : '/',
-  )
+  const response = await page.goto(surface.diagnosticPath)
   const rawHtml = await response?.text()
   const pageItems = page.locator('.page-items li')
   const paginationState = page.getByTestId('pagination-state')
@@ -312,7 +316,7 @@ test('the integration crosses its complete live boundary', async ({
 
     expect(deploymentSockets()).toHaveLength(1)
     await page.getByRole('link', { name: 'Open alternate route' }).click()
-    await expect(page).toHaveURL('/alternate')
+    await expect(page).toHaveURL('/__diagnostics/alternate')
     await expect(page.getByText('runtime / 002 · alternate route')).toBeVisible()
     await expect(queryState).toHaveAttribute('data-state', 'success')
     await expect(trace.getByText(mutationLabel, { exact: true })).toBeVisible()
@@ -320,7 +324,7 @@ test('the integration crosses its complete live boundary', async ({
     expect(deploymentSockets()).toHaveLength(1)
 
     await page.getByRole('link', { name: 'Open primary route' }).click()
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/__diagnostics')
     await expect(page.getByText('runtime / 002 · primary route')).toBeVisible()
     await expect(queryState).toHaveAttribute('data-state', 'success')
     expect(deploymentSockets()).toHaveLength(1)

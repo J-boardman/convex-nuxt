@@ -18,13 +18,13 @@ if (!convexUrl) {
   )
 }
 
-const label = `nuxt static ${randomUUID()}`
+const label = `Nuxt static Relay post ${randomUUID()}`
 const client = new ConvexHttpClient(convexUrl)
 
-await client.mutation(api.probes.record, {
-  label,
-  requestId: label,
-  surface: 'nuxt',
+await client.mutation(api.social.createPost, {
+  authorId: 'lin',
+  body: label,
+  requestId: `nuxt-static-${randomUUID()}`,
 })
 
 execFileSync(pnpm, [
@@ -51,5 +51,5 @@ const html = await readFile(
 
 assert.match(html, new RegExp(label))
 process.stdout.write(
-  `Static Nuxt HTML contains its server query payload: ${label}\n`,
+  `Static Nuxt HTML contains its Relay server payload: ${label}\n`,
 )

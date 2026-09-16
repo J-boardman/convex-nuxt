@@ -22,3 +22,5 @@
     </footer>
   </main>
 </template>
+
+<style scoped src="../assets/diagnostic.css" />

@@ -1,3 +1,4 @@
+<!-- Low-level integration probes intentionally live outside the product route. -->
 <script setup lang="ts">
 import { api } from '@j-boardman/convex-playground-backend/api'
 import {
@@ -421,3 +422,5 @@ async function proveOptimisticRollback() {
     </footer>
   </main>
 </template>
+
+<style scoped src="../assets/diagnostic.css" />

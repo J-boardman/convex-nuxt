@@ -1,13 +1,7 @@
-<script setup lang="ts">
-const config = useRuntimeConfig()
-const deploymentUrl = String(config.public.convexPlaygroundUrl)
-</script>
-
 <template>
-  <ConfiguredBench
-    :deployment-url="deploymentUrl"
+  <RelayWorkspace
     destination="/alternate"
-    destination-label="Open alternate route"
+    destination-label="Alternate view"
     route-name="primary route"
   />
 </template>

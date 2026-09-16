@@ -5,8 +5,8 @@ const testUsers = process.env.CONVEX_TEST_USERS
 
 export default defineNuxtConfig({
   compatibilityDate: '2026-09-01',
-  css: ['~/assets/main.css'],
-  devtools: { enabled: true },
+  css: ['@j-boardman/convex-playground-shared/style.css'],
+  devtools: { enabled: false },
   modules: deploymentUrl ? ['@j-boardman/convex-nuxt'] : [],
   convex: deploymentUrl ? { url: deploymentUrl } : undefined,
   runtimeConfig: {

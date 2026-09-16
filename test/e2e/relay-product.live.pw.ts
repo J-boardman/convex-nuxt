@@ -9,20 +9,39 @@ if (!convexUrl) {
   throw new Error('The live Relay test requires CONVEX_URL.')
 }
 
-test('the Vue playground behaves like a live Relay workspace', async ({
+const surfaces = {
+  'nuxt-live': {
+    label: 'Nuxt',
+    runtime: 'nuxt',
+    serverRendered: true,
+  },
+  'vue-live': {
+    label: 'Vue',
+    runtime: 'vue',
+    serverRendered: false,
+  },
+} as const
+
+test('the playground behaves like a live Relay workspace', async ({
   page,
 }, testInfo) => {
-  test.skip(testInfo.project.name !== 'vue-live')
-
+  const surface = surfaces[testInfo.project.name as keyof typeof surfaces]
   const client = new ConvexHttpClient(convexUrl)
   const stamp = Date.now()
+  const initialPost = `Initial server post ${surface.runtime} ${stamp}`
   const externalPost = `Posted from another client ${stamp}`
-  const browserPost = `Vue shared an update ${stamp}`
-  const browserMessage = `Vue joined the room ${stamp}`
+  const browserPost = `${surface.label} shared an update ${stamp}`
+  const browserMessage = `${surface.label} joined the room ${stamp}`
+  const browserHttpQueries: string[] = []
   const runtimeErrors: string[] = []
   const sockets: string[] = []
 
   await client.mutation(api.social.ensureDemoData, {})
+  await client.mutation(api.social.createPost, {
+    authorId: 'sam',
+    body: initialPost,
+    requestId: `initial-${surface.runtime}-${stamp}`,
+  })
   page.on('console', (message) => {
     if (message.type() === 'error'
       && !message.text().startsWith('Failed to load resource:')) {
@@ -31,10 +50,25 @@ test('the Vue playground behaves like a live Relay workspace', async ({
   })
   page.on('pageerror', error => runtimeErrors.push(error.message))
   page.on('websocket', socket => sockets.push(socket.url()))
+  page.on('request', (request) => {
+    if (request.method() === 'POST'
+      && new URL(request.url()).pathname === '/api/query') {
+      browserHttpQueries.push(request.url())
+    }
+  })
 
   const response = await page.goto('/')
-  expect(await response?.text()).not.toContain('The new feed is running')
-  await expect(page.locator('.relay')).toHaveAttribute('data-runtime', 'vue')
+  const rawHtml = await response?.text()
+  if (surface.serverRendered) {
+    expect(rawHtml).toContain(initialPost)
+    await expect(page.getByTestId('hydration-state'))
+      .toHaveAttribute('data-hydrated', 'true')
+  }
+  else {
+    expect(rawHtml).not.toContain(initialPost)
+  }
+  await expect(page.locator('.relay'))
+    .toHaveAttribute('data-runtime', surface.runtime)
   await expect(page.getByRole('heading', { name: 'Good morning, Ada.' }))
     .toBeVisible()
   await expect(page.locator('.relay-post')).not.toHaveCount(0)
@@ -65,17 +99,37 @@ test('the Vue playground behaves like a live Relay workspace', async ({
 
   await expect(page.getByRole('link', { name: 'Diagnostics' }))
     .toHaveAttribute('href', '/__diagnostics')
-  await expect(page.getByTestId('hmr-update-count')).toHaveText('hmr 0')
+  if (surface.runtime === 'vue') {
+    await expect(page.getByTestId('hmr-update-count')).toHaveText('hmr 0')
+  }
+
+  if (surface.runtime === 'nuxt') {
+    const deploymentSockets = () => sockets.filter(socket =>
+      belongsToConvexDeployment(socket, convexUrl),
+    )
+    expect(deploymentSockets()).toHaveLength(1)
+    await page.getByRole('link', { name: 'Alternate view' }).click()
+    await expect(page).toHaveURL('/alternate')
+    await expect(page.getByText('alternate route', { exact: true }))
+      .toBeVisible()
+    await expect(page.getByText(browserPost, { exact: true })).toBeVisible()
+    expect(deploymentSockets()).toHaveLength(1)
+    await page.getByRole('link', { name: 'Primary view' }).click()
+    await expect(page).toHaveURL('/')
+    expect(deploymentSockets()).toHaveLength(1)
+  }
+
   await page.screenshot({
     fullPage: true,
-    path: testInfo.outputPath('relay-vue-desktop.png'),
+    path: testInfo.outputPath(`relay-${surface.runtime}-desktop.png`),
   })
   await page.setViewportSize({ height: 844, width: 390 })
   await expect(page.getByRole('navigation', { name: 'Mobile navigation' }))
     .toBeVisible()
   await page.screenshot({
     fullPage: true,
-    path: testInfo.outputPath('relay-vue-mobile.png'),
+    path: testInfo.outputPath(`relay-${surface.runtime}-mobile.png`),
   })
+  expect(browserHttpQueries).toEqual([])
   expect(runtimeErrors).toEqual([])
 })

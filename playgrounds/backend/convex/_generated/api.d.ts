@@ -9,6 +9,7 @@
  */
 
 import type * as probes from "../probes.js";
+import type * as social from "../social.js";
 
 import type {
   ApiFromModules,
@@ -18,6 +19,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   probes: typeof probes;
+  social: typeof social;
 }>;
 
 /**

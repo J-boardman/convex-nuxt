@@ -15,17 +15,15 @@ describe('workspace development scripts', () => {
     const root = await readManifest('package.json')
     const backend = await readManifest('playgrounds/backend/package.json')
 
-    expect(root.scripts.dev).toContain('run dev')
-    expect(root.scripts.dev).toContain('@j-boardman/convex-playground-backend')
-    expect(root.scripts.dev).toContain('@j-boardman/convex-vue-playground')
-    expect(root.scripts.dev).toContain('@j-boardman/convex-nuxt-playground')
+    expect(root.scripts.dev)
+      .toBe('pnpm run dev:prepare && node scripts/run-playgrounds.mjs')
     expect(root.scripts.typecheck).toBe(
       'pnpm build && pnpm run typecheck:packages && pnpm run test:types',
     )
     expect(root.scripts).toMatchObject({
-      'dev:backend': expect.stringContaining('convex-playground-backend'),
-      'dev:nuxt': expect.stringContaining('convex-nuxt-playground'),
-      'dev:vue': expect.stringContaining('convex-vue-playground'),
+      'dev:backend': 'node scripts/run-playgrounds.mjs backend',
+      'dev:nuxt': 'node scripts/run-playgrounds.mjs nuxt',
+      'dev:vue': 'node scripts/run-playgrounds.mjs vue',
     })
     expect(backend.scripts.dev).toBe('convex dev')
   })

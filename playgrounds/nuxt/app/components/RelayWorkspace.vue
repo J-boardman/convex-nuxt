@@ -21,19 +21,19 @@ defineProps<{
 }>()
 
 const viewer: RelayPerson = {
-  avatar: 'AB',
-  handle: 'adabell',
-  id: 'ada',
+  avatar: 'LM',
+  handle: 'linmakes',
+  id: 'lin',
   isOnline: true,
-  name: 'Ada Bell',
-  role: 'Product design',
+  name: 'Lin Martin',
+  role: 'Engineering',
 }
 const auth = useConvexAuth()
 const people = useConvexQuery(api.social.listPeople, {})
 const messages = useConvexQuery(api.social.listMessages, {})
 const posts = useConvexPaginatedQuery(
   api.social.listPosts,
-  { actorId: 'ada' },
+  { actorId: 'lin' },
   { initialNumItems: 5 },
 )
 const connection = import.meta.client ? useConvexConnectionState() : undefined
@@ -94,7 +94,7 @@ async function publishPost(body: string) {
   isPosting.value = true
   try {
     await createPost({
-      authorId: 'ada',
+      authorId: 'lin',
       body,
       requestId: crypto.randomUUID(),
     })
@@ -110,7 +110,7 @@ async function reactToPost(postId: string, reacted: boolean) {
   const post = posts.results.find(candidate => candidate.id === postId)
   if (!post) return
   await setReaction({
-    actorId: 'ada',
+    actorId: 'lin',
     postId: post.id,
     reacted,
   })
@@ -122,7 +122,7 @@ async function publishMessage(body: string) {
   isSending.value = true
   try {
     await sendMessage({
-      authorId: 'ada',
+      authorId: 'lin',
       body,
       requestId: crypto.randomUUID(),
     })

@@ -11,14 +11,24 @@ if (!convexUrl) {
 
 const surfaces = {
   'nuxt-live': {
+    externalAuthorId: 'ada',
     label: 'Nuxt',
     runtime: 'nuxt',
     serverRendered: true,
+    viewer: {
+      id: 'lin',
+      name: 'Lin Martin',
+    },
   },
   'vue-live': {
+    externalAuthorId: 'lin',
     label: 'Vue',
     runtime: 'vue',
     serverRendered: false,
+    viewer: {
+      id: 'ada',
+      name: 'Ada Bell',
+    },
   },
 } as const
 
@@ -69,7 +79,9 @@ test('the playground behaves like a live Relay workspace', async ({
   }
   await expect(page.locator('.relay'))
     .toHaveAttribute('data-runtime', surface.runtime)
-  await expect(page.getByRole('heading', { name: 'Good morning, Ada.' }))
+  await expect(page.getByRole('heading', {
+    name: `Good morning, ${surface.viewer.name.split(' ')[0]}.`,
+  }))
     .toBeVisible()
   await expect(page.locator('.relay-post')).not.toHaveCount(0)
   await expect.poll(() => sockets.some(socket =>
@@ -77,9 +89,9 @@ test('the playground behaves like a live Relay workspace', async ({
   )).toBe(true)
 
   await client.mutation(api.social.createPost, {
-    authorId: 'lin',
+    authorId: surface.externalAuthorId,
     body: externalPost,
-    requestId: `vue-external-${stamp}`,
+    requestId: `${surface.runtime}-external-${stamp}`,
   })
   await expect(page.getByText(externalPost, { exact: true })).toBeVisible()
 
@@ -92,10 +104,28 @@ test('the playground behaves like a live Relay workspace', async ({
     .locator('.relay-reaction')
   await firstReaction.click()
   await expect(firstReaction).toHaveAttribute('aria-pressed', 'true')
+  await expect.poll(async () => {
+    const feed = await client.query(api.social.listPosts, {
+      actorId: surface.viewer.id,
+      paginationOpts: { cursor: null, numItems: 20 },
+    })
+    const createdPost = feed.page.find(post => post.body === browserPost)
+    return {
+      authorId: createdPost?.author.id,
+      isReacted: createdPost?.isReacted,
+    }
+  }).toEqual({
+    authorId: surface.viewer.id,
+    isReacted: true,
+  })
 
   await page.getByLabel('Message the studio').fill(browserMessage)
   await page.getByRole('button', { name: 'Send message' }).click()
   await expect(page.getByText(browserMessage, { exact: true })).toBeVisible()
+  await expect.poll(async () => {
+    const messages = await client.query(api.social.listMessages, {})
+    return messages.find(message => message.body === browserMessage)?.author.id
+  }).toBe(surface.viewer.id)
 
   await expect(page.getByRole('link', { name: 'Diagnostics' }))
     .toHaveAttribute('href', '/__diagnostics')

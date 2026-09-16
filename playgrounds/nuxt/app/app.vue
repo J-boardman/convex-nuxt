@@ -61,7 +61,12 @@ if (deploymentUrl) {
     },
     isAuthenticated: browserToken.value !== null,
     isLoading: browserTokenLoading.value,
-  }), { serverToken })
+  }), {
+    initialState: authProbeEnabled
+      ? undefined
+      : { isAuthenticated: false },
+    serverToken,
+  })
 }
 </script>
 

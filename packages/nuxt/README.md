@@ -114,7 +114,7 @@ Auth must be configured before page queries begin. Late setup throws with a
 targeted message instead of allowing an unauthenticated subscription race.
 
 The repository's [auth adapter guide](https://github.com/j-boardman/convex-nuxt/blob/main/docs/auth-adapters.md)
-shows the provider contract and a request-scoped Clerk example for Nuxt SSR.
+shows the provider contract and the first-party Convex Auth v2 H3/SSR design.
 
 ## Server routes and middleware
 

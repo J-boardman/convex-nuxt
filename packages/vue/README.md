@@ -175,7 +175,8 @@ Convex client. Signing out clears auth and stale callbacks cannot overwrite the
 newer state.
 
 The repository's [auth adapter guide](https://github.com/j-boardman/convex-nuxt/blob/main/docs/auth-adapters.md)
-documents the complete contract and a Clerk example.
+documents the complete contract and the first-party Convex Auth v2 reference
+binding.
 
 ## Connection and client access
 

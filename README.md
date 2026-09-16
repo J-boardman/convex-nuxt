@@ -48,8 +48,9 @@ The development and release gates are described in
 [`docs/development-and-release.md`](./docs/development-and-release.md).
 Applications moving from the existing community integrations should follow the
 deliberate [migration guide](./docs/migrating-from-community-packages.md).
-Auth providers can be integrated through the low-level contract and the
-[Vue and Nuxt Clerk examples](./docs/auth-adapters.md).
+Authentication is integrated through the low-level contract; the
+[Convex Auth v2 adapter guide](./docs/auth-adapters.md) records the first-party
+reference design and its current alpha boundary.
 The [support policy](./docs/support-policy.md) records the currently proven
 version, runtime, browser, and deployment matrix.
 

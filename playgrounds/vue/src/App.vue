@@ -12,6 +12,7 @@ import {
   useConvexQuery,
 } from '@j-boardman/convex-vue'
 import { computed, ref, watch } from 'vue'
+import { hmrUpdateCount } from './hmr-probe'
 import { useProbeOperations } from './useProbeOperations'
 
 const client = useConvexClient()
@@ -178,6 +179,10 @@ async function proveOptimisticRollback() {
           <div>
             <dt>Reconnects</dt>
             <dd>{{ connection.connectionCount }}</dd>
+          </div>
+          <div>
+            <dt>Hot updates</dt>
+            <dd data-testid="hmr-update-count">{{ hmrUpdateCount }}</dd>
           </div>
         </dl>
       </aside>

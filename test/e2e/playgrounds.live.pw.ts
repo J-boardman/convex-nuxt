@@ -266,6 +266,21 @@ test('the integration crosses its complete live boundary', async ({
       .length
 
     expect(deploymentSocketCount()).toBe(1)
+    await expect(page.getByTestId('hmr-update-count')).toHaveText('0')
+    await page.evaluate(async () => {
+      const response = await fetch('/__convex-hmr-probe', { method: 'POST' })
+      if (!response.ok) {
+        throw new Error(`HMR probe failed with status ${response.status}.`)
+      }
+    })
+    await expect(page.getByTestId('hmr-update-count')).toHaveText('1')
+    expect(deploymentSocketCount()).toBe(1)
+    expect(webSockets.filter(url =>
+      belongsToConvexDeployment(url, convexUrl),
+    )).toHaveLength(1)
+    await expect(queryState).toHaveAttribute('data-state', 'success')
+    await expect(trace.getByText(mutationLabel, { exact: true })).toBeVisible()
+
     await page.evaluate(() => {
       const remount = (window as typeof window & {
         __remountConvexPlayground?: () => void

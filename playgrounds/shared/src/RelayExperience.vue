@@ -19,6 +19,7 @@ const props = withDefaults(defineProps<{
   people: RelayPerson[]
   posts: RelayPost[]
   runtime: RelayRuntime
+  timeOrigin: number
   viewer: RelayPerson
 }>(), {
   canLoadMore: false,
@@ -42,7 +43,7 @@ const runtimeLabel = computed(() => props.runtime === 'nuxt' ? 'Nuxt' : 'Vue')
 const onlinePeople = computed(() => props.people.filter(person => person.isOnline))
 
 function relativeTime(createdAt: number) {
-  const seconds = Math.max(0, Math.floor((Date.now() - createdAt) / 1000))
+  const seconds = Math.max(0, Math.floor((props.timeOrigin - createdAt) / 1000))
   if (seconds < 60) return 'now'
 
   const minutes = Math.floor(seconds / 60)

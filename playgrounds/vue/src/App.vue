@@ -44,6 +44,7 @@ const setReaction = useConvexMutation(api.social.setReaction)
 const sendMessage = useConvexMutation(api.social.sendMessage)
 const isPosting = ref(false)
 const isSending = ref(false)
+const timeOrigin = Date.now()
 
 const feedState = computed<RelayAsyncState>(() => {
   if (posts.state.status === 'error') return 'error'
@@ -116,6 +117,7 @@ async function publishMessage(body: string) {
 <template>
   <RelayExperience
     runtime="vue"
+    :time-origin="timeOrigin"
     :viewer="viewer"
     :people="people.data ?? [viewer]"
     :posts="posts.results"

@@ -52,6 +52,7 @@ const sendMessage = import.meta.client
 const hasMounted = ref(false)
 const isPosting = ref(false)
 const isSending = ref(false)
+const timeOrigin = useState('relay-time-origin', () => Date.now())
 
 const feedState = computed<RelayAsyncState>(() => {
   if (posts.state.status === 'error') return 'error'
@@ -135,6 +136,7 @@ async function publishMessage(body: string) {
 <template>
   <RelayExperience
     runtime="nuxt"
+    :time-origin="timeOrigin"
     :data-hydrated="hasMounted"
     :viewer="viewer"
     :people="people.data ?? [viewer]"

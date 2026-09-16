@@ -51,8 +51,8 @@ The playgrounds and packed consumers answer different questions.
 
 The Vue playground exercises live queries, reactive arguments, skip and stale
 states, mutations, actions, optimistic updates, pagination, auth, connection
-state, and teardown. It is also the manual HMR surface; HMR is not yet an
-automated support claim.
+state, and teardown. Its live browser test also drives a real Vite hot update
+and an application-root remount while counting active Convex sockets.
 
 The Nuxt playground exercises the same shared behavior plus server-rendered
 HTML, payload reuse, hydration, static generation, and server helpers. Focused

@@ -29,8 +29,9 @@ payload transport, hydration without a duplicate HTTP query, direct Convex
 reads during client navigation, and H3 request-token isolation. Authentication
 tokens are never put in public runtime config or hydration payloads.
 
-The packages are pre-release software until the packed-consumer and browser
-verification matrix in the [design](./docs/convex-nuxt-design.md) is complete.
+The packages remain pre-release software. Their release gate includes the
+packed-consumer and browser verification matrix in the
+[design](./docs/convex-nuxt-design.md).
 
 ## Develop both integrations
 

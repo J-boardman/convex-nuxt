@@ -60,7 +60,7 @@ This proposal is based on source and documentation snapshots taken on 2026-08-31
 | [Nuxt `useAsyncData`](https://nuxt.com/docs/4.x/api/composables/use-async-data) and [data fetching](https://nuxt.com/docs/4.x/getting-started/data-fetching) | Nuxt transfers keyed server data in its payload and reuses it during hydration. Client navigation can run the same composable without an extra hydration fetch. | Use `useAsyncData` as the SSR carrier and keep its handler side-effect free on the server. |
 | [Nuxt plugins](https://nuxt.com/docs/4.x/directory-structure/app/plugins) and [`useRequestEvent`](https://nuxt.com/docs/4.x/api/composables/use-request-event) | Plugins run before components and can declare dependencies; the incoming H3 event is available only on the server. | Create the client in an early module plugin, configure auth in a dependent plugin, and keep tokens on the request event. |
 | Existing [`convex-nuxt`](https://github.com/chris-visser/convex-nuxt) and [`convex-vue`](https://github.com/chris-visser/convex-vue) | The Nuxt package is a small auto-import/plugin wrapper over `convex-vue`; its package declares no tests. The Vue layer has no actions, auth state, pagination, connection state, or Nuxt payload-to-live contract. | Starting from these packages would leave the difficult work unsolved. Use them only as naming and migration references. |
-| [`onmax/nuxt-convex`](https://github.com/onmax/nuxt-convex/tree/bb1d4086891fea1a723ab230bb0119185e9d22a6), commit `bb1d408` | The monorepo correctly separates `vue-convex` from a Nuxt module and has meaningful Vue tests. However, the inspected Nuxt plugin mainly installs the Vue plugin; the Vue transport reaches through an undocumented `ConvexClient` internal, keys arguments with plain `JSON.stringify`, and documents pagination as client-only. The inspected Nuxt E2E tests do not prove query HTML-to-hydration continuity. | Keep the two-package boundary and discard the internal-client dependency. Treat its Nuxt SSR continuity as INCONCLUSIVE until reproduced; build payload, auth-isolation, and hydration tests before claiming parity. |
+| [`onmax/nuxt-convex`](https://github.com/onmax/nuxt-convex/tree/bb1d4086891fea1a723ab230bb0119185e9d22a6), commit `bb1d408` | The monorepo correctly separates `vue-convex` from a Nuxt module and has meaningful Vue tests. However, the inspected Nuxt plugin mainly installs the Vue plugin; the Vue query transport reaches through an undocumented `ConvexClient` internal, keys arguments with plain `JSON.stringify`, and documents pagination as client-only. The inspected Nuxt E2E tests do not prove query HTML-to-hydration continuity. | Keep the two-package boundary and do not adopt its undocumented query transport. Any narrow base-client escape hatch needs an upstream limitation, an isolated owner, and real-browser proof. Treat its Nuxt SSR continuity as INCONCLUSIVE until reproduced; build payload, auth-isolation, and hydration tests before claiming parity. |
 
 Observed facts above come directly from the linked docs or source. Architecture choices below are proposals derived from them.
 
@@ -516,7 +516,7 @@ The actual adapter also has a paginated seed operation with the same lifecycle. 
 
 The shared Vue plugin constructs one `ConvexClient` after validating the public deployment URL. It stores the runtime behind a private `InjectionKey`, not a string key or a process-global singleton. The Nuxt runtime plugin calls the same installer; it does not construct a second client.
 
-The runtime supports one deployment URL. A second initialization with the same URL is idempotent; a different URL throws and explains that the existing client must be closed first. Query scopes never close the client. App unmount, integration-owned HMR disposal, and explicit `closeConvex` close only the client created by this runtime. The Vite and Nuxt fixtures must prove that hot replacement neither leaks clients nor leaves a remounted app holding a closed client.
+The runtime supports one deployment URL. A second initialization with the same URL is idempotent; a different URL throws and explains that the existing client must be closed first. Query scopes never close the client. App unmount and explicit `closeConvex` close only the client created by this runtime. An accepted Vite hot update preserves that app-owned runtime; an application-root remount closes the old runtime and creates one replacement. The live fixture proves both paths by counting active sockets and executing queries and writes after each transition.
 
 Convex already deduplicates identical underlying subscriptions. Each composable still owns its callback and disposal so Vue scope lifetimes remain correct.
 
@@ -602,6 +602,16 @@ Auth has two inputs and one authoritative output:
 When the provider returns to loading after previously settling, auth returns to `loading`. On first hydration, however, a server seed remains in effect until the provider settles. This prevents a signed-in page from flashing signed-out content.
 
 The current React-specific client exposes `isRefreshing`, but the framework-neutral `ConvexClient.setAuth` does not expose the refresh callback in Convex 1.45. Nuxt must not reach through its internal `.client` property to obtain it. Add refresh state only after Convex publishes the callback on a framework-neutral API, or after the project deliberately adopts another public client surface. The wrapper token fetcher can still record a thrown provider error, but it must rethrow it to Convex rather than treating it as a valid unauthenticated token.
+
+Convex 1.45 also does not expose `clearAuth` on the framework-neutral
+`ConvexClient`, while its exported base client does. For sign-out, the shared
+auth controller clears the base-client identity while the socket is active,
+then installs a null token fetcher so the authentication manager cancels its
+refresh timers. An internal auth epoch removes identity-bound query data until
+the anonymous subscriptions settle. Focused controller tests cover every query
+shape, and the Nuxt live browser sequence proves refresh, user switch,
+sign-out, and sign-in without remounting the query consumer. This escape hatch
+should collapse to `ConvexClient.clearAuth()` if that API becomes available.
 
 On the server, `serverToken` is stored as a string, `null`, or lazy promise in `event.context.convex`. Each HTTP operation awaits that request's value. No `AsyncLocalStorage` is required for normal Nuxt use, which avoids a Node-only dependency and makes the boundary work in edge Nitro runtimes. The explicit `createConvexHttpClient({ token })` API remains available outside a Nuxt application context.
 
@@ -711,25 +721,26 @@ row is not called complete merely because the API exists.
 | Reactive pagination | Yes | Yes | Implemented; SSR hydration, early load, and exhaustion have live-browser proof; invalid-cursor recovery has unit proof |
 | SSR seed to live subscription | Preloaded query/Next helpers | `convexLoad` | Implemented; manual Vue seed and automatic Nuxt payload handoff have packed and live-browser proof |
 | Authenticated SSR token isolation | Framework helper | Async-local server helper | Implemented for Nuxt; concurrent signed identities and token-free HTML have live-browser proof; generic Vue SSR remains host-owned |
-| Generic reactive auth adapter | Yes | Yes | Implemented; controller transitions have unit proof and Nuxt authenticated hydration has live-browser proof |
+| Generic reactive auth adapter | Yes | Yes | Implemented; unit proof plus live-browser refresh, identity switch, sign-out, sign-in, and authenticated hydration |
 | Auth refresh state | Yes | No | Deferred upstream; public `ConvexClient` 1.45 does not expose the React refresh callback |
 | Server HTTP client helper | Framework-specific helpers | Yes | Implemented; generic factory and request-aware Nuxt helper have unit and packed-consumer proof |
 | Connection-state composable | Yes | No | Implemented; unit and live WebSocket proof |
-| Explicit teardown | Client close | Yes | Implemented; unit and component-disposal/navigation proof; app-root remount and HMR browser proof remain |
-| Dynamic `useQueries` | Yes | No | Implemented; type and atomic controller proof, but no browser proof yet |
+| Explicit teardown | Client close | Yes | Implemented; unit plus component-disposal, navigation, app-root remount, and Vite HMR browser proof |
+| Dynamic `useQueries` | Yes | No | Implemented; type, atomic controller, and live transaction browser proof |
 | Auth render components | Yes | No | Deferred; templates can branch on `useConvexAuth` without another state owner |
 | Paginated optimistic helpers | Yes | No | Deferred; ordinary Convex optimistic mutations are supported |
 | Prewarm query | Client method | No | Deferred; the injected client remains the escape hatch |
 | Multiple deployments per app | Possible with explicit clients | No | Not planned |
 
-### Pre-release evidence still required
+### Pre-release evidence status
 
-The core M1 surface is implemented. The first stable definition of done still
-requires consumer-facing proof for application-root remount/HMR and for an
-atomic dynamic query set. Provider refresh, auth-context changes, and sign-out
-also need a real browser sequence even though their state machines have unit
-coverage. Nuxt 3, older exact dependency floors, and additional browsers remain
-outside the supported matrix until dedicated fixtures pass.
+The core M1 surface and its planned consumer-facing evidence are implemented.
+Application-root remount, Vite HMR, atomic dynamic query sets, provider token
+refresh, auth-context changes, sign-out, and sign-in all run against the
+self-owned live backend in the browser suite. Nuxt 3, older exact dependency
+floors, and additional browsers remain outside the supported matrix until
+dedicated fixtures pass; they are not release blockers for the documented
+first support line.
 
 File storage, search, and vector-search features require no special framework wrapper; callers use generated Convex functions and ordinary browser upload APIs. They belong in examples and integration tests, not in new client abstractions.
 

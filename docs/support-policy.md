@@ -32,10 +32,11 @@ Cloudflare Module Nitro presets. Anonymous queries can also be prerendered into
 static output and become live subscriptions after hydration. A browser Convex
 client is never constructed during SSR or prerendering.
 
-The automated browser support claim covers component disposal and route
-navigation, but not an application-root remount or source-file hot replacement.
-Those remain manual development checks until a repeatable browser fixture
-proves the exact lifecycle.
+The automated browser support claim covers component disposal, route
+navigation, application-root remount, and Vite source-module hot replacement.
+The remount proof requires the old socket to close and one replacement runtime
+to remain usable; the hot-update proof requires the existing runtime and socket
+to survive unchanged.
 
 Both packages are ESM-only. CommonJS `require()` is not supported. TypeScript
 must use a modern Node or bundler module-resolution mode capable of following

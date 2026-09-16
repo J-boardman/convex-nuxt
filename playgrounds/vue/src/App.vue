@@ -1,401 +1,146 @@
 <script setup lang="ts">
 import { api } from '@j-boardman/convex-playground-backend/api'
 import {
+  RelayExperience,
+  type RelayAsyncState,
+  type RelayMessage,
+  type RelayPerson,
+} from '@j-boardman/convex-playground-shared'
+import {
   setupConvexAuth,
-  useConvexAuth,
-  useConvexAction,
-  useConvexClient,
   useConvexConnectionState,
   useConvexMutation,
   useConvexPaginatedQuery,
-  useConvexQueries,
   useConvexQuery,
 } from '@j-boardman/convex-vue'
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { hmrUpdateCount } from './hmr-probe'
-import { useProbeOperations } from './useProbeOperations'
 
-const client = useConvexClient()
 setupConvexAuth(() => ({
   fetchAccessToken: async () => null,
   isAuthenticated: false,
   isLoading: false,
 }))
-const auth = useConvexAuth()
-const deployment = import.meta.env.VITE_CONVEX_URL
+
+const viewer: RelayPerson = {
+  avatar: 'AB',
+  handle: 'adabell',
+  id: 'ada',
+  isOnline: true,
+  name: 'Ada Bell',
+  role: 'Product design',
+}
 const connection = useConvexConnectionState()
-const queryEnabled = ref(true)
-const querySurface = ref<'vue' | 'nuxt'>('vue')
-const queryArgs = computed<{ surface: 'vue' | 'nuxt' } | 'skip'>(() =>
-  queryEnabled.value ? { surface: querySurface.value } : 'skip',
+const people = useConvexQuery(api.social.listPeople, {})
+const messages = useConvexQuery(api.social.listMessages, {})
+const posts = useConvexPaginatedQuery(
+  api.social.listPosts,
+  { actorId: 'ada' },
+  { initialNumItems: 5 },
 )
-const probes = useConvexQuery(api.probes.list, queryArgs, {
-  keepPreviousData: true,
+const ensureDemoData = useConvexMutation(api.social.ensureDemoData)
+const createPost = useConvexMutation(api.social.createPost)
+const setReaction = useConvexMutation(api.social.setReaction)
+const sendMessage = useConvexMutation(api.social.sendMessage)
+const isPosting = ref(false)
+const isSending = ref(false)
+
+const feedState = computed<RelayAsyncState>(() => {
+  if (posts.state.status === 'error') return 'error'
+  if (posts.state.status === 'pending') return 'loading'
+  return 'success'
 })
-const paginatedProbes = useConvexPaginatedQuery(
-  api.probes.paginated,
-  { surface: 'vue' },
-  { initialNumItems: 3 },
-)
-const record = useConvexMutation(api.probes.record)
-const recordAtomicPair = useConvexMutation(api.probes.recordAtomicPair)
-const atomicQueries = useConvexQueries({
-  nuxt: { query: api.probes.list, args: { surface: 'nuxt' } },
-  vue: { query: api.probes.list, args: { surface: 'vue' } },
+const paginationState = computed<RelayAsyncState>(() => {
+  if (posts.state.status === 'pending') return 'loading'
+  if (posts.state.status === 'stale') return 'loading'
+  if (posts.state.status === 'skipped') return 'loading'
+  return posts.state.status
 })
-const atomicTarget = ref<string>()
-const atomicState = ref<'pending' | 'ready' | 'updating' | 'complete'>('pending')
-const atomicMixedSeen = ref(false)
-const optimisticLabel = 'Optimistic value awaiting rollback'
-const optimisticSeen = ref(false)
-const optimisticState = ref<'idle' | 'pending' | 'rolledBack'>('idle')
-const rejectOptimistic = useConvexMutation(api.probes.rejectOptimistic)
-  .withOptimisticUpdate((store, args) => {
-    const current = store.getQuery(api.probes.list, { surface: args.surface })
-    if (!current?.length) return
-
-    store.setQuery(
-      api.probes.list,
-      { surface: args.surface },
-      current.map((probe, index) => index === current.length - 1
-        ? { ...probe, label: optimisticLabel }
-        : probe),
-    )
-  })
-const roundTrip = useConvexAction(api.probes.roundTrip)
-const {
-  actionError,
-  actionResult,
-  actionState,
-  label,
-  lastRequest,
-  mutationError,
-  mutationState,
-  sendAction,
-  sendMutation,
-} = useProbeOperations(record, roundTrip)
-
-const probeCount = computed(() => probes.data?.length ?? 0)
-watch(
-  () => probes.data,
-  value => {
-    if (value?.some(probe => probe.label === optimisticLabel)) {
-      optimisticSeen.value = true
-    }
-  },
-  { deep: true, flush: 'sync' },
+const chatState = computed<RelayAsyncState>(() => {
+  if (messages.state.status === 'error') return 'error'
+  if (messages.state.status === 'pending') return 'loading'
+  if (messages.state.status === 'stale') return 'loading'
+  return 'success'
+})
+const relayMessages = computed<RelayMessage[]>(() =>
+  (messages.data ?? []).map(message => ({
+    ...message,
+    isOwn: message.author.id === viewer.id,
+  })),
 )
 
-watch(
-  () => atomicQueries.state,
-  (state) => {
-    const vueLabel = state.vue.status === 'success'
-      ? state.vue.data.at(-1)?.label
-      : undefined
-    const nuxtLabel = state.nuxt.status === 'success'
-      ? state.nuxt.data.at(-1)?.label
-      : undefined
+onMounted(async () => {
+  await ensureDemoData({})
+})
 
-    if (!atomicTarget.value) {
-      if (vueLabel !== undefined && nuxtLabel !== undefined) atomicState.value = 'ready'
-      return
-    }
-
-    const matches = [vueLabel, nuxtLabel]
-      .filter(label => label === atomicTarget.value)
-      .length
-    if (matches === 1) atomicMixedSeen.value = true
-    if (matches === 2) atomicState.value = 'complete'
-  },
-  { deep: true, flush: 'sync', immediate: true },
-)
-
-async function proveAtomicQueries() {
-  const requestId = crypto.randomUUID()
-  atomicTarget.value = `Atomic query pair ${requestId}`
-  atomicMixedSeen.value = false
-  atomicState.value = 'updating'
-  await recordAtomicPair({ label: atomicTarget.value, requestId })
+async function publishPost(body: string) {
+  isPosting.value = true
+  try {
+    await createPost({
+      authorId: 'ada',
+      body,
+      requestId: crypto.randomUUID(),
+    })
+  }
+  finally {
+    isPosting.value = false
+  }
 }
 
-async function proveOptimisticRollback() {
-  optimisticSeen.value = false
-  optimisticState.value = 'pending'
+async function reactToPost(postId: string, reacted: boolean) {
+  const post = posts.results.find(candidate => candidate.id === postId)
+  if (!post) return
+
+  await setReaction({
+    actorId: 'ada',
+    postId: post.id,
+    reacted,
+  })
+}
+
+async function publishMessage(body: string) {
+  isSending.value = true
   try {
-    await rejectOptimistic({ surface: 'vue' })
+    await sendMessage({
+      authorId: 'ada',
+      body,
+      requestId: crypto.randomUUID(),
+    })
   }
-  catch {
-    optimisticState.value = 'rolledBack'
+  finally {
+    isSending.value = false
   }
 }
 </script>
 
 <template>
-  <main class="bench">
-    <header class="masthead">
-      <p class="eyebrow">Vue integration playground</p>
-      <p class="edition">runtime / 001</p>
-    </header>
-
-    <section class="hero" aria-labelledby="page-title">
-      <div class="hero-copy">
-        <p class="kicker">Convex signal bench</p>
-        <h1 id="page-title">
-          Watch the client.<br>
-          Trust the transition.
-        </h1>
-        <p class="introduction">
-          A development surface for the state changes that matter: one client,
-          live query hand-off, authentication, pagination, and teardown.
-        </p>
-      </div>
-
-      <aside class="runtime-card" aria-label="Active Convex runtime">
-        <div class="runtime-heading">
-          <span class="status-light" aria-hidden="true" />
-          <span>Client active</span>
-        </div>
-        <dl>
-          <div>
-            <dt>Owner</dt>
-            <dd>Vue application</dd>
-          </div>
-          <div>
-            <dt>Deployment</dt>
-            <dd>{{ deployment }}</dd>
-          </div>
-          <div>
-            <dt>Closed</dt>
-            <dd>{{ client.closed ? 'yes' : 'no' }}</dd>
-          </div>
-          <div>
-            <dt>Auth</dt>
-            <dd>{{ auth.state.status }}</dd>
-          </div>
-          <div>
-            <dt>Socket</dt>
-            <dd>{{ connection.isWebSocketConnected ? 'connected' : 'connecting' }}</dd>
-          </div>
-          <div>
-            <dt>Reconnects</dt>
-            <dd>{{ connection.connectionCount }}</dd>
-          </div>
-          <div>
-            <dt>Hot updates</dt>
-            <dd data-testid="hmr-update-count">{{ hmrUpdateCount }}</dd>
-          </div>
-        </dl>
-      </aside>
-    </section>
-
-    <section class="probe-grid" aria-label="Convex integration probes">
-      <section class="signal-panel live-feed" aria-labelledby="feed-title">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">Reactive query</p>
-            <h2 id="feed-title">Live event trace</h2>
-          </div>
-          <p class="panel-note">
-            {{ probeCount }} / 25 retained
-          </p>
-        </div>
-
-        <div class="query-status" :data-state="probes.state.status">
-          <span class="status-light" aria-hidden="true" />
-          <strong>{{ probes.state.status }}</strong>
-          <span v-if="probes.error">{{ probes.error.message }}</span>
-          <span v-else>Subscription state is explicit and reactive.</span>
-        </div>
-
-        <form class="query-controls" aria-label="Reactive query controls">
-          <label>
-            Event surface
-            <select v-model="querySurface" data-testid="query-surface">
-              <option value="vue">Vue</option>
-              <option value="nuxt">Nuxt</option>
-            </select>
-          </label>
-          <label class="query-toggle">
-            <input
-              v-model="queryEnabled"
-              data-testid="query-enabled"
-              type="checkbox"
-            >
-            Subscription enabled
-          </label>
-        </form>
-
-        <ol v-if="probes.data?.length" class="event-list">
-          <li v-for="probe in probes.data" :key="probe._id">
-            <time>{{ new Date(probe._creationTime).toLocaleTimeString() }}</time>
-            <span>{{ probe.label }}</span>
-            <code>{{ probe.requestId.slice(0, 8) }}</code>
-          </li>
-        </ol>
-        <p v-else-if="probes.state.status === 'success'" class="empty-state">
-          No events yet. Record the first mutation to watch this query update.
-        </p>
-        <p v-else class="empty-state">
-          Waiting for the first server value.
-        </p>
-      </section>
-
-      <section class="control-panel" aria-labelledby="control-title">
-        <div>
-          <p class="eyebrow">Write controls</p>
-          <h2 id="control-title">Cross the boundary</h2>
-        </div>
-
-        <form @submit.prevent="sendMutation(false)">
-          <label for="probe-label">Event label</label>
-          <input
-            id="probe-label"
-            v-model="label"
-            maxlength="120"
-            autocomplete="off"
-          >
-          <button type="submit" :disabled="mutationState === 'sending' || !label.trim()">
-            {{ mutationState === 'sending' ? 'Recording…' : 'Record mutation' }}
-          </button>
-        </form>
-
-        <div class="operation-result" aria-live="polite">
-          <span>Mutation</span>
-          <strong v-if="mutationState === 'created'">created one event</strong>
-          <strong v-else-if="mutationState === 'reused'">retry reused the event</strong>
-          <strong v-else-if="mutationState === 'error'">{{ mutationError }}</strong>
-          <strong v-else>{{ mutationState }}</strong>
-        </div>
-
-        <button
-          class="secondary-button"
-          type="button"
-          :disabled="!lastRequest || mutationState === 'sending'"
-          @click="sendMutation(true)"
-        >
-          Retry same request
-        </button>
-
-        <button
-          type="button"
-          :disabled="optimisticState === 'pending' || !probes.data?.length"
-          @click="proveOptimisticRollback"
-        >
-          Prove optimistic rollback
-        </button>
-        <div
-          class="operation-result"
-          data-testid="optimistic-state"
-          :data-seen="optimisticSeen"
-          :data-state="optimisticState"
-        >
-          <span>Optimistic update</span>
-          <strong>{{ optimisticSeen && optimisticState === 'rolledBack' ? 'observed and rolled back' : optimisticState }}</strong>
-        </div>
-
-        <button
-          type="button"
-          :disabled="atomicState === 'pending' || atomicState === 'updating'"
-          @click="proveAtomicQueries"
-        >
-          Prove atomic queries
-        </button>
-        <div
-          class="operation-result"
-          data-testid="atomic-query-state"
-          :data-mixed="atomicMixedSeen"
-          :data-state="atomicState"
-        >
-          <span>Dynamic queries</span>
-          <strong>{{ atomicState }}</strong>
-        </div>
-
-        <div class="action-probe">
-          <button type="button" :disabled="actionState === 'sending'" @click="sendAction">
-            {{ actionState === 'sending' ? 'Invoking…' : 'Invoke action' }}
-          </button>
-          <p aria-live="polite">
-            {{ actionError ?? actionResult ?? 'No action result yet.' }}
-          </p>
-        </div>
-      </section>
-    </section>
-
-    <section class="signal-panel lifecycle-panel" aria-labelledby="signal-title">
-      <div class="panel-heading">
-        <div>
-          <p class="eyebrow">Lifecycle trace</p>
-          <h2 id="signal-title">One runtime, four observation points</h2>
-        </div>
-        <p class="panel-note">The same probe contract will drive Nuxt.</p>
-      </div>
-
-      <ol class="signal-rail">
-        <li :class="{ 'is-live': !client.closed }">
-          <span class="rail-marker" />
-          <strong>Client</strong>
-          <small>app-owned</small>
-        </li>
-        <li :class="{ 'is-live': probes.state.status === 'success' }">
-          <span class="rail-marker" />
-          <strong>Query</strong>
-          <small>{{ probes.state.status }}</small>
-        </li>
-        <li>
-          <span class="rail-marker" />
-          <strong>Auth</strong>
-          <small>awaiting probe</small>
-        </li>
-        <li :class="{ 'is-live': mutationState === 'created' || mutationState === 'reused' }">
-          <span class="rail-marker" />
-          <strong>Write</strong>
-          <small>{{ mutationState }}</small>
-        </li>
-      </ol>
-    </section>
-
-    <section
-      class="signal-panel pagination-panel"
-      aria-labelledby="pagination-title"
-      data-testid="pagination-state"
-      :data-state="paginatedProbes.state.status"
-    >
-      <div class="panel-heading">
-        <div>
-          <p class="eyebrow">Reactive pagination</p>
-          <h2 id="pagination-title">Incremental event window</h2>
-        </div>
-        <p class="panel-note">{{ paginatedProbes.results.length }} loaded</p>
-      </div>
-
-      <div class="pagination-body">
-        <ol v-if="paginatedProbes.results.length" class="page-items">
-          <li
-            v-for="probe in paginatedProbes.results"
-            :key="probe._id"
-            :data-probe-id="probe._id"
-          >
-            <strong>{{ probe.label }}</strong>
-            <code>{{ probe.requestId.slice(0, 8) }}</code>
-          </li>
-        </ol>
-        <p v-else class="empty-page">Record a few events to open the window.</p>
-        <button
-          type="button"
-          :disabled="paginatedProbes.state.status !== 'ready'"
-          @click="paginatedProbes.loadMore(3)"
-        >
-          {{ paginatedProbes.state.status === 'loadingMore' ? 'Loading…' : 'Load three more' }}
-        </button>
-        <span class="pagination-state" :data-state="paginatedProbes.state.status">
-          {{ paginatedProbes.state.status }}
-        </span>
-      </div>
-    </section>
-
-    <footer>
-      <span>@j-boardman/convex-vue</span>
-      <span>diagnostic surface</span>
-    </footer>
-  </main>
+  <RelayExperience
+    runtime="vue"
+    :viewer="viewer"
+    :people="people.data ?? [viewer]"
+    :posts="posts.results"
+    :messages="relayMessages"
+    :feed-state="feedState"
+    :chat-state="chatState"
+    :pagination-state="paginationState"
+    :can-load-more="posts.state.status === 'ready' || posts.state.status === 'loadingMore'"
+    :is-posting="isPosting"
+    :is-sending="isSending"
+    @create-post="publishPost"
+    @toggle-reaction="reactToPost"
+    @send-message="publishMessage"
+    @load-more="posts.loadMore(5)"
+  >
+    <template #receipt-title>Vue owns one live client</template>
+    <template #receipt-copy>
+      Feed and chat subscriptions share the application-owned connection.
+    </template>
+    <template #receipt-detail>
+      <span class="relay-runtime-receipt">
+        <span>{{ connection.isWebSocketConnected ? 'socket live' : 'connecting' }}</span>
+        <span data-testid="hmr-update-count">hmr {{ hmrUpdateCount }}</span>
+        <a href="/__diagnostics">Diagnostics</a>
+      </span>
+    </template>
+  </RelayExperience>
 </template>

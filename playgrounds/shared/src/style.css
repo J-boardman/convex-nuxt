@@ -344,6 +344,23 @@ a {
   color: var(--relay-accent-ink);
 }
 
+.relay-runtime-receipt {
+  display: grid;
+  gap: 3px;
+  justify-items: end;
+  color: var(--relay-accent-ink);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.relay-runtime-receipt a {
+  color: inherit;
+  text-underline-offset: 3px;
+}
+
 .relay-signal {
   display: flex;
   gap: 3px;
@@ -933,6 +950,11 @@ a {
 
   .relay-receipt-detail {
     grid-column: 2;
+  }
+
+  .relay-runtime-receipt {
+    grid-column: 2;
+    justify-items: start;
   }
 
   .relay-post-content > header span:nth-of-type(1),

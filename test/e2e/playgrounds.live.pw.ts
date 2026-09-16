@@ -138,7 +138,9 @@ test('the integration crosses its complete live boundary', async ({
     })
   }
 
-  const response = await page.goto('/')
+  const response = await page.goto(
+    surface.own === 'vue' ? '/__diagnostics' : '/',
+  )
   const rawHtml = await response?.text()
   const pageItems = page.locator('.page-items li')
   const paginationState = page.getByTestId('pagination-state')

@@ -76,10 +76,12 @@ describe('workspace development scripts', () => {
 
   it('runs every deterministic gate through verify', async () => {
     const root = await readManifest('package.json')
+    const playwrightConfig = await readFile('playwright.config.ts', 'utf8')
 
     expect(root.scripts['test:unit']).toContain('vitest run')
     expect(root.scripts['test:module']).toContain('test/nuxt')
     expect(root.scripts['test:e2e']).toBe('playwright test')
+    expect(playwrightConfig).toContain("testIgnore: '**/*.live.pw.ts'")
     expect(root.scripts['test:live']).toContain('run-live-tests.mjs')
     expect(root.scripts['test:live:against']).toContain('test:live:browser')
     expect(root.scripts['test:live:against']).toContain('test:live:static')

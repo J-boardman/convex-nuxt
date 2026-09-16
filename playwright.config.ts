@@ -2,6 +2,7 @@ import { defineConfig } from '@playwright/test'
 
 export default defineConfig({
   testDir: './test/e2e',
+  testIgnore: '**/*.live.pw.ts',
   testMatch: '**/*.pw.ts',
   forbidOnly: Boolean(process.env.CI),
   fullyParallel: true,

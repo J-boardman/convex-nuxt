@@ -454,6 +454,7 @@ packages/
       components/                    # optional auth helpers, later milestone
 playgrounds/
   backend/                           # shared Convex functions and data
+  shared/                            # private Relay components and styles
   vue/                               # interactive Vue + Vite consumer
   nuxt/                              # interactive Nuxt SSR/SPA consumer
 test/

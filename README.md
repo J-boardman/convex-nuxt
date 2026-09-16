@@ -44,6 +44,15 @@ pnpm dev
 the Vue playground, and the Nuxt playground together. Each surface also has a
 root command: `pnpm dev:backend`, `pnpm dev:vue`, and `pnpm dev:nuxt`.
 
+Both application roots present **Relay**, the same small social workspace with
+a live feed, reactions, and studio chat. The Vue and Nuxt apps share the private
+`playgrounds/shared` presentation package, while keeping their Convex setup and
+composables in their own application code. This makes the visual comparison
+honest: Vue demonstrates an application-owned live client; Nuxt demonstrates
+server payload reuse, hydration, and route continuity. Low-level lifecycle,
+auth, pagination, atomic-query, rollback, and teardown controls live at
+`/__diagnostics` in both apps.
+
 The development and release gates are described in
 [`docs/development-and-release.md`](./docs/development-and-release.md).
 Applications moving from the existing community integrations should follow the

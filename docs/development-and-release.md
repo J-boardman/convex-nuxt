@@ -22,7 +22,8 @@ packages/
   vue/                 # public Vue runtime and composables
   nuxt/                # public Nuxt module and SSR adapter
 playgrounds/
-  backend/             # shared Convex project and diagnostic data
+  backend/             # shared Convex project and Relay/diagnostic data
+  shared/              # private presentational Vue components and styles
   vue/                 # interactive Vue + Vite application
   nuxt/                # interactive Nuxt application
 test/
@@ -34,14 +35,18 @@ test/
 
 Package code must never import playground or test code. Playground applications
 import the libraries through their workspace package names, not through relative
-paths into `src`.
+paths into `src`. The private shared playground package can depend on Vue, but
+must not import Convex, `@j-boardman/convex-vue`, or
+`@j-boardman/convex-nuxt`.
 
 ## Playground and consumer contracts
 
 The playgrounds and packed consumers answer different questions.
 
-- A playground is a workspace-linked development application. It provides HMR,
-  manual diagnostics, and browser surfaces for Playwright.
+- A playground is a workspace-linked development application. Its `/` route is
+  the Relay social workspace used for human-facing examples; its
+  `/__diagnostics` route provides the lower-level probes used by maintainers and
+  Playwright.
 - A consumer fixture installs generated `.tgz` files outside the workspace. It
   proves package metadata, exports, dependency rewriting, types, and production
   builds as npm users receive them.
@@ -49,21 +54,33 @@ The playgrounds and packed consumers answer different questions.
   consumer build cannot prove live browser lifecycle behavior. Both are release
   requirements.
 
-The Vue playground exercises live queries, reactive arguments, skip and stale
-states, mutations, actions, optimistic updates, pagination, auth, connection
+The Relay surface exercises a paginated live feed, desired-state reactions, and
+chat through normal product interactions. Vue and Nuxt receive the same plain
+view models and intent events from `playgrounds/shared`; each application owns
+its own queries, mutations, auth setup, client lifecycle, SSR decisions, and
+error handling. Runtime variants use an explicit badge and receipt as well as a
+different accent, so the apps remain distinguishable without relying on colour.
+
+The Vue diagnostic surface exercises reactive arguments, skip and stale states,
+mutations, actions, optimistic rollback, pagination, auth state, connection
 state, and teardown. Its live browser test also drives a real Vite hot update
 and an application-root remount while counting active Convex sockets.
 
-The Nuxt playground exercises the same shared behavior plus server-rendered
-HTML, payload reuse, hydration, static generation, and server helpers. Focused
-tests cover authenticated SSR state and concurrent request isolation without
-putting credentials in the browser fixture.
+The Nuxt Relay surface renders its first feed on the server, reuses that payload
+during hydration, upgrades it to a live subscription, and retains one client
+across product-route navigation. Its diagnostic surface exercises the same
+low-level behavior as Vue plus server helpers. Focused tests cover authenticated
+SSR state and concurrent request isolation without putting credentials in the
+browser fixture.
 
-The shared Convex playground backend supplies deterministic query, pagination,
-auth, action, transaction, error, and unusual-value cases. The live suite starts
-an accountless disposable Convex backend by default, generates an ephemeral
-signing key for its auth checks, and removes both after the run. An explicit
-`CONVEX_URL` can instead target a separately managed compatible deployment.
+The shared Convex playground backend supplies the Relay posts, reactions,
+messages, and four fixed demo personas alongside deterministic query,
+pagination, auth, action, transaction, error, and unusual-value probes. Relay
+personas are public, non-sensitive demo actors; they are not an authentication
+example. The live suite starts an accountless disposable Convex backend by
+default, generates an ephemeral signing key for its auth checks, and removes
+both after the run. An explicit `CONVEX_URL` can instead target a separately
+managed compatible deployment.
 
 ## Root script contract
 

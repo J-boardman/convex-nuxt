@@ -1,7 +1,10 @@
 import { createSSRApp } from 'vue'
 import { describe, expect, it } from 'vitest'
 import { installConvexRuntime } from '../../packages/nuxt/src/runtime/install'
-import { resolveConvexRuntimeOptions } from '../../packages/nuxt/src/runtime/config'
+import {
+  resolveConfiguredConvexRuntimeOptions,
+  resolveConvexRuntimeOptions,
+} from '../../packages/nuxt/src/runtime/config'
 import { useConvexRuntime } from '../../packages/vue/src/plugin'
 
 describe('Nuxt runtime installation', () => {
@@ -43,5 +46,19 @@ describe('Nuxt runtime installation', () => {
       ssr: 'sometimes',
       url: 'https://calm-wren-123.convex.cloud',
     })).toThrow('convex.ssr must be a boolean')
+  })
+
+  it('leaves the app inactive until a deployment URL is configured', () => {
+    expect(resolveConfiguredConvexRuntimeOptions({ url: '' })).toBeNull()
+    expect(resolveConfiguredConvexRuntimeOptions({})).toBeNull()
+    expect(resolveConfiguredConvexRuntimeOptions({
+      url: 'https://calm-wren-123.convex.cloud',
+    })).toMatchObject({
+      ssr: true,
+      url: 'https://calm-wren-123.convex.cloud',
+    })
+    expect(() => resolveConfiguredConvexRuntimeOptions({ url: 42 })).toThrow(
+      'Set convex.url in nuxt.config.ts or NUXT_PUBLIC_CONVEX_URL',
+    )
   })
 })

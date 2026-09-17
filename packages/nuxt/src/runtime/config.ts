@@ -78,6 +78,20 @@ export function resolveConvexRuntimeOptions(value: unknown): ConvexNuxtRuntimeOp
   }
 }
 
+export function resolveConfiguredConvexRuntimeOptions(
+  value: unknown,
+): ConvexNuxtRuntimeOptions | null {
+  if (
+    isRecord(value)
+    && (value.url === undefined
+      || (typeof value.url === 'string' && value.url.trim() === ''))
+  ) {
+    return null
+  }
+
+  return resolveConvexRuntimeOptions(value)
+}
+
 declare module 'nuxt/schema' {
   interface PublicRuntimeConfig {
     convex: ConvexNuxtPublicRuntimeConfig

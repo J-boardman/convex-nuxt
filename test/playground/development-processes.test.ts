@@ -49,4 +49,11 @@ describe('playground development processes', () => {
     expect(manifest.scripts['dev:nuxt'])
       .toBe('node scripts/run-playgrounds.mjs nuxt')
   })
+
+  it('keeps Nuxt auto-imports available before deployment setup', async () => {
+    const config = await readFile('playgrounds/nuxt/nuxt.config.ts', 'utf8')
+
+    expect(config).toContain("modules: ['@j-boardman/convex-nuxt']")
+    expect(config).not.toContain('modules: deploymentUrl ?')
+  })
 })

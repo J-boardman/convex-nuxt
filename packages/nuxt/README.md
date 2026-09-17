@@ -32,6 +32,11 @@ NUXT_PUBLIC_CONVEX_URL=https://example.convex.cloud
 The URL is public by design. Authentication tokens are request-scoped and are
 never stored in public runtime config.
 
+The module can remain installed while the URL is absent or blank, such as on a
+setup screen or before a local deployment has started. It still generates the
+Convex auto-imports, but does not create a client or install the SSR bridge until
+a URL is configured.
+
 ## Use in pages and components
 
 The module auto-imports the shared Vue composables:

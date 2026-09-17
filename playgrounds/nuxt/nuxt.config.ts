@@ -7,7 +7,7 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-09-01',
   css: ['@j-boardman/convex-playground-shared/style.css'],
   devtools: { enabled: false },
-  modules: deploymentUrl ? ['@j-boardman/convex-nuxt'] : [],
+  modules: ['@j-boardman/convex-nuxt'],
   convex: deploymentUrl ? { url: deploymentUrl } : undefined,
   runtimeConfig: {
     convexTestUsers: testUsers ?? '',

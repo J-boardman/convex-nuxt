@@ -1,6 +1,6 @@
 {
   "name": "@j-boardman/convex-vue",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "First-class Convex integration for Vue 3",
   "keywords": [
     "convex",

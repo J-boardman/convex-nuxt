@@ -96,4 +96,24 @@ describe('Convex writes', () => {
       { channel: 'general' },
     )
   })
+
+  it('can be declared during SSR and reject only when called there', async () => {
+    const app = createSSRApp({})
+    app.use(createConvexVuePlugin({
+      createClient: vi.fn(),
+      isBrowser: () => false,
+    }), { url: 'https://one.convex.cloud' })
+
+    const [mutate, act] = app.runWithContext(() => [
+      useConvexMutation(createMessage),
+      useConvexAction(generateSummary),
+    ] as const)
+
+    await expect(mutate({ body: 'hello' })).rejects.toThrow(
+      'Calling a Convex mutation is browser-only',
+    )
+    await expect(act({ channel: 'general' })).rejects.toThrow(
+      'Calling a Convex action is browser-only',
+    )
+  })
 })

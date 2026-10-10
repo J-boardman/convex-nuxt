@@ -1,12 +1,12 @@
 import type { OptimisticUpdate } from 'convex/browser'
-import type { ConvexClient } from 'convex/browser'
 import type {
   FunctionArgs,
   FunctionReference,
   FunctionReturnType,
   OptionalRestArgs,
 } from 'convex/server'
-import { useConvexClient } from './plugin.js'
+import { browserClient, useConvexRuntime } from './plugin.js'
+import type { ConvexVueRuntime } from './plugin.js'
 
 type SynchronousOptimisticUpdate<Update> = Update extends (
   ...args: infer Args
@@ -29,20 +29,24 @@ export interface ConvexAction<Action extends FunctionReference<'action'>> {
   (...args: OptionalRestArgs<Action>): Promise<FunctionReturnType<Action>>
 }
 
+// Writes resolve the client when called, so components can declare them
+// during SSR and only a server-side call fails.
 function createMutation<Mutation extends FunctionReference<'mutation'>>(
   mutation: Mutation,
-  client: ConvexClient,
+  runtime: ConvexVueRuntime,
   optimisticUpdate?: OptimisticUpdate<FunctionArgs<Mutation>>,
 ): ConvexMutation<Mutation> {
-  const callable = ((...args: OptionalRestArgs<Mutation>) =>
-    client.mutation(mutation, (args[0] ?? {}) as FunctionArgs<Mutation>, {
-      optimisticUpdate,
-    })) as ConvexMutation<Mutation>
+  const callable = (async (...args: OptionalRestArgs<Mutation>) =>
+    await browserClient(runtime, 'Calling a Convex mutation').mutation(
+      mutation,
+      (args[0] ?? {}) as FunctionArgs<Mutation>,
+      { optimisticUpdate },
+    )) as ConvexMutation<Mutation>
   callable.withOptimisticUpdate = (update) => {
     if (optimisticUpdate) {
       throw new Error('This Convex mutation already has an optimistic update.')
     }
-    return createMutation(mutation, client, update)
+    return createMutation(mutation, runtime, update)
   }
   return callable
 }
@@ -50,15 +54,16 @@ function createMutation<Mutation extends FunctionReference<'mutation'>>(
 export function useConvexMutation<Mutation extends FunctionReference<'mutation'>>(
   mutation: Mutation,
 ): ConvexMutation<Mutation> {
-  return createMutation(mutation, useConvexClient())
+  return createMutation(mutation, useConvexRuntime())
 }
 
 export function useConvexAction<Action extends FunctionReference<'action'>>(
   action: Action,
 ): ConvexAction<Action> {
-  const client = useConvexClient()
-  return (...args: OptionalRestArgs<Action>): Promise<FunctionReturnType<Action>> => {
-    const actionArgs = (args[0] ?? {}) as FunctionArgs<Action>
-    return client.action(action, actionArgs)
-  }
+  const runtime = useConvexRuntime()
+  return async (...args: OptionalRestArgs<Action>): Promise<FunctionReturnType<Action>> =>
+    await browserClient(runtime, 'Calling a Convex action').action(
+      action,
+      (args[0] ?? {}) as FunctionArgs<Action>,
+    )
 }

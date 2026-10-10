@@ -77,11 +77,14 @@ export function createConvexVuePlugin(
 
 export const convexVue: Plugin<[ConvexVueOptions]> = createConvexVuePlugin()
 
-export function useConvexClient(): ConvexClient {
-  const runtime = useConvexRuntime()
+/** @internal */
+export function browserClient(
+  runtime: ConvexVueRuntime,
+  caller: string,
+): ConvexClient {
   if (!runtime.client) {
     throw new Error(
-      'useConvexClient() is browser-only. '
+      `${caller} is browser-only. `
       + 'Use ConvexHttpClient from convex/browser during SSR.',
     )
   }
@@ -89,4 +92,8 @@ export function useConvexClient(): ConvexClient {
     throw new Error('The Convex client for this Vue application is closed.')
   }
   return runtime.client
+}
+
+export function useConvexClient(): ConvexClient {
+  return browserClient(useConvexRuntime(), 'useConvexClient()')
 }

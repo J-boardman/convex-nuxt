@@ -107,7 +107,6 @@ details.
 | `CONVEX_URL=... pnpm test:live` | Exercise the live suite against a separately managed compatible deployment. |
 | `pnpm verify` | Typecheck, lint, build, and run the local suite. |
 | `pnpm changeset` | Record release intent for a package-facing change. |
-| `pnpm preview` | Publish both packages to `pkg.pr.new` from CI. |
 | `pnpm version-packages` | Apply package versions and changelogs. |
 | `pnpm release` | Verify and publish the versioned packages. |
 
@@ -133,19 +132,14 @@ job also runs `pnpm test:live` against the disposable backend, so live queries,
 WebSockets, authenticated SSR isolation, hydration, and static generation do
 not depend on repository credentials.
 
-## Versioning and previews
+## Versioning
 
 Changesets owns versions, changelogs, tags, and publication. The two packages
 form a fixed group: changing either published package versions both. This keeps
 the Nuxt adapter and its exact Vue dependency on one supportable release line.
 
 Package-facing pull requests include a changeset. Documentation-only, test-only,
-and internal maintenance changes normally do not. After a reviewer with write
-access approves a pull request, CI publishes both packages in one `pkg-pr-new`
-invocation. The preview uses the exact approved commit and a synthetic preview
-version, so installing it cannot pin a consumer lockfile to a future npm release.
-The repository's `pkg.pr.new` GitHub App must be installed before this workflow
-can upload or comment with preview links.
+and internal maintenance changes normally do not.
 
 Before a pull request is mergeable, CI must run:
 

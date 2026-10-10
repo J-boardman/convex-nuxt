@@ -77,10 +77,6 @@ Before 1.0:
   security, lifecycle, or SSR invariant, or after a documented replacement has
   shipped.
 
-Preview builds from `pkg.pr.new` use synthetic versions and are never a support
-line. They exist so applications can test the exact reviewed pull-request
-revision before it reaches npm.
-
 ## Dependency and security maintenance
 
 The repository pins development and fixture dependencies so a passing commit

@@ -1,22 +1,25 @@
-import { spawn } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { Buffer } from 'node:buffer'
 import {
   generateKeyPairSync,
+  randomBytes,
   sign as signPayload,
 } from 'node:crypto'
+import { existsSync } from 'node:fs'
 import {
   cp,
   copyFile,
+  mkdir,
   mkdtemp,
   rm,
   symlink,
   writeFile,
 } from 'node:fs/promises'
 import { createServer } from 'node:net'
-import { tmpdir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import process from 'node:process'
-import { clearTimeout, setTimeout } from 'node:timers'
+import { setTimeout as delay } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -24,6 +27,8 @@ const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm'
 const authAudience = 'convex-nuxt-live'
 const authIssuer = 'https://convex-nuxt-live.test'
 const authKeyId = 'convex-nuxt-live-key'
+// Upgrade deliberately: newer artifacts can require newer host libraries.
+const backendVersion = 'precompiled-2026-09-28-5c7cb5b'
 
 function encodeJson(value) {
   return Buffer.from(JSON.stringify(value)).toString('base64url')
@@ -125,49 +130,61 @@ function reservePort() {
   })
 }
 
-function waitForBackend(child) {
-  return new Promise((resolveReady, rejectReady) => {
-    let output = ''
-    const timeout = setTimeout(() => {
-      rejectReady(new Error('Timed out waiting for the disposable Convex backend.'))
-    }, 120_000)
+// Shares the Convex CLI's cache, so a binary it already fetched is reused.
+async function ensureBackendBinary() {
+  const directory = join(homedir(), '.cache/convex/binaries', backendVersion)
+  const binary = join(directory, 'convex-local-backend')
+  if (existsSync(binary)) return binary
 
-    const inspect = (chunk) => {
-      const text = chunk.toString()
-      output += text
-      process.stderr.write(text)
-      if (output.includes('Convex functions ready!')) {
-        clearTimeout(timeout)
-        resolveReady()
-      }
+  const targets = {
+    'darwin-arm64': 'aarch64-apple-darwin',
+    'darwin-x64': 'x86_64-apple-darwin',
+    'linux-arm64': 'aarch64-unknown-linux-gnu',
+    'linux-x64': 'x86_64-unknown-linux-gnu',
+  }
+  const target = targets[`${process.platform}-${process.arch}`]
+  if (!target) {
+    throw new Error(`No Convex backend artifact for ${process.platform}-${process.arch}.`)
+  }
+
+  const archive = join(directory, 'backend.zip')
+  await mkdir(directory, { recursive: true })
+  await run('curl', [
+    '--fail',
+    '--location',
+    '--silent',
+    '--show-error',
+    '--output',
+    archive,
+    `https://github.com/get-convex/convex-backend/releases/download/${backendVersion}/convex-local-backend-${target}.zip`,
+  ])
+  await run('unzip', ['-o', '-q', archive, '-d', directory])
+  await rm(archive)
+  return binary
+}
+
+async function waitForBackend(url, child) {
+  for (let attempt = 0; attempt < 240; attempt += 1) {
+    if (child.exitCode !== null) {
+      throw new Error(`The Convex backend exited with status ${child.exitCode}.`)
     }
-
-    child.stdout.on('data', inspect)
-    child.stderr.on('data', inspect)
-    child.once('error', (error) => {
-      clearTimeout(timeout)
-      rejectReady(error)
-    })
-    child.once('exit', (code, signal) => {
-      clearTimeout(timeout)
-      rejectReady(new Error(
-        `Disposable Convex backend exited before it was ready (${signal ?? code}).`,
-      ))
-    })
-  })
+    try {
+      if ((await globalThis.fetch(`${url}/version`)).ok) return
+    }
+    catch {
+      // Not listening yet.
+    }
+    await delay(500)
+  }
+  throw new Error('Timed out waiting for the disposable Convex backend.')
 }
 
 async function stopBackend(child) {
   if (child.exitCode !== null || child.signalCode !== null) return
 
-  child.kill('SIGINT')
-  await new Promise((resolveExit) => {
-    const force = setTimeout(() => child.kill('SIGTERM'), 10_000)
-    child.once('exit', () => {
-      clearTimeout(force)
-      resolveExit()
-    })
-  })
+  const exited = new Promise(resolveExit => child.once('exit', resolveExit))
+  child.kill('SIGTERM')
+  await exited
 }
 
 async function runAgainst(convexUrl, testAuth) {
@@ -197,6 +214,7 @@ else {
     const cloudPort = await reservePort()
     let sitePort = await reservePort()
     while (sitePort === cloudPort) sitePort = await reservePort()
+    const convexUrl = `http://127.0.0.1:${cloudPort}`
     const testAuth = createTestAuth()
 
     await cp(
@@ -221,28 +239,43 @@ else {
       join(temporaryRoot, 'node_modules'),
     )
 
-    backend = spawn(pnpm, [
-      'exec',
-      'convex',
-      'dev',
-      '--local-cloud-port',
+    const binary = await ensureBackendBinary()
+    const instance = [
+      '--instance-name',
+      'convex-nuxt-live',
+      '--instance-secret',
+      randomBytes(32).toString('hex'),
+    ]
+    const adminKey = execFileSync(binary, ['keygen', 'admin-key', ...instance])
+      .toString()
+      .trim()
+
+    backend = spawn(binary, [
+      ...instance,
+      '--interface',
+      '127.0.0.1',
+      '--port',
       String(cloudPort),
-      '--local-site-port',
+      '--site-proxy-port',
       String(sitePort),
-      '--tail-logs',
-      'disable',
+      '--local-storage',
+      join(temporaryRoot, 'storage'),
+      join(temporaryRoot, 'backend.sqlite3'),
     ], {
+      cwd: temporaryRoot,
+      stdio: ['ignore', 'ignore', 'inherit'],
+    })
+
+    await waitForBackend(convexUrl, backend)
+    await run(pnpm, ['exec', 'convex', 'deploy', '--yes'], {
       cwd: temporaryRoot,
       env: {
         ...process.env,
-        CONVEX_AGENT_MODE: 'anonymous',
-        NO_COLOR: '1',
+        CONVEX_SELF_HOSTED_ADMIN_KEY: adminKey,
+        CONVEX_SELF_HOSTED_URL: convexUrl,
       },
-      stdio: ['ignore', 'pipe', 'pipe'],
     })
-
-    await waitForBackend(backend)
-    await runAgainst(`http://127.0.0.1:${cloudPort}`, testAuth)
+    await runAgainst(convexUrl, testAuth)
   }
   finally {
     if (backend) await stopBackend(backend)

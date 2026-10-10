@@ -96,15 +96,4 @@ describe('Convex writes', () => {
       { channel: 'general' },
     )
   })
-
-  it('rejects string function names before sending a write', () => {
-    const harness = createHarness()
-
-    expect(() => harness.app.runWithContext(() =>
-      useConvexMutation('messages:create' as unknown as CreateMessage),
-    )).toThrow('requires a generated function reference')
-    expect(() => harness.app.runWithContext(() =>
-      useConvexAction('messages:summary' as unknown as GenerateSummary),
-    )).toThrow('requires a generated function reference')
-  })
 })

@@ -98,9 +98,6 @@ export function useConvexQuery<Query extends FunctionReference<'query'>>(
   argsInput: MaybeReactive<FunctionArgs<Query> | ConvexQuerySkip> = {} as FunctionArgs<Query>,
   options: UseConvexQueryOptions<FunctionReturnType<Query>> = {},
 ): UseConvexQueryResult<FunctionReturnType<Query>> {
-  if (typeof query === 'string') {
-    throw new Error('useConvexQuery() requires a generated function reference, not a string.')
-  }
 
   type QueryResult = FunctionReturnType<Query>
   const runtime = useConvexRuntime()

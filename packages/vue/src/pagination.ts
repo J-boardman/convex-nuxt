@@ -142,11 +142,6 @@ export function useConvexPaginatedQuery<
   argsInput: MaybeRefOrGetter<ConvexPaginatedQueryArgs<Query> | ConvexQuerySkip>,
   options: UseConvexPaginatedQueryOptions<ConvexPaginatedQueryItem<Query>>,
 ): UseConvexPaginatedQueryResult<ConvexPaginatedQueryItem<Query>> {
-  if (typeof query === 'string') {
-    throw new Error(
-      'useConvexPaginatedQuery() requires a generated function reference, not a string.',
-    )
-  }
   validateInitialNumItems(options.initialNumItems)
 
   type Item = ConvexPaginatedQueryItem<Query>

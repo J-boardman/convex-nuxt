@@ -50,18 +50,12 @@ function createMutation<Mutation extends FunctionReference<'mutation'>>(
 export function useConvexMutation<Mutation extends FunctionReference<'mutation'>>(
   mutation: Mutation,
 ): ConvexMutation<Mutation> {
-  if (typeof mutation === 'string') {
-    throw new Error('useConvexMutation() requires a generated function reference, not a string.')
-  }
   return createMutation(mutation, useConvexClient())
 }
 
 export function useConvexAction<Action extends FunctionReference<'action'>>(
   action: Action,
 ): ConvexAction<Action> {
-  if (typeof action === 'string') {
-    throw new Error('useConvexAction() requires a generated function reference, not a string.')
-  }
   const client = useConvexClient()
   return (...args: OptionalRestArgs<Action>): Promise<FunctionReturnType<Action>> => {
     const actionArgs = (args[0] ?? {}) as FunctionArgs<Action>

@@ -21,8 +21,8 @@ function createSeedHarness(
     prepareServerToken: vi.fn(),
     useAuthData: vi.fn(),
     useQueryData(key, handler, enabled) {
-      const cached = payload.get(key)
-      const data = ref<JSONValue | undefined>(cached)
+      const cached = payload.has(key)
+      const data = ref<JSONValue | undefined>(payload.get(key))
       const error = ref<unknown>()
       const status = ref<'error' | 'idle' | 'pending' | 'success'>(
         cached ? 'success' : enabled ? 'pending' : 'idle',
@@ -82,6 +82,29 @@ describe('Nuxt SSR bridge', () => {
     expect(hydratedSeed.pending.value).toBe(false)
     expect(browserLoad).not.toHaveBeenCalled()
     expect(browserHarness.pendingTasks).toHaveLength(0)
+  })
+
+  it('hydrates a null query result from the payload', async () => {
+    const payload = new Map<string, JSONValue>()
+    const serverHarness = createSeedHarness(payload, async () => null)
+    const query = makeFunctionReference<'query', Record<string, never>, null>(
+      'viewer:get',
+    )
+    const request = { args: {}, enabled: true, key: 'viewer:get:{}', query }
+
+    createNuxtSsrBridge('https://example.convex.cloud', serverHarness.dependencies)
+      .useQuerySeed<null>(request)
+    await Promise.all(serverHarness.pendingTasks)
+
+    const browserLoad = vi.fn(async () => null)
+    const browserHarness = createSeedHarness(payload, browserLoad)
+    const hydratedSeed = createNuxtSsrBridge(
+      'https://example.convex.cloud',
+      browserHarness.dependencies,
+    ).useQuerySeed<null>(request)
+
+    expect(hydratedSeed.data.value).toBeNull()
+    expect(browserLoad).not.toHaveBeenCalled()
   })
 
   it('does not create a query loader for a disabled seed', () => {

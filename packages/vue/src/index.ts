@@ -9,7 +9,6 @@ export type {
   UseConvexAuthResult,
 } from './auth.js'
 export {
-  closeConvex,
   convexVue,
   useConvexClient,
 } from './plugin.js'

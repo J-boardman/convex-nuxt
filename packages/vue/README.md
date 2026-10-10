@@ -166,8 +166,6 @@ binding.
   SSR.
 - `useConvexConnectionState()` returns a shallow-readonly reactive connection
   snapshot.
-- `closeConvex()` explicitly tears down the current application's client, which
-  is useful in tests.
 
 These functions use Vue injection and must be called while the current Vue app
 context is available.

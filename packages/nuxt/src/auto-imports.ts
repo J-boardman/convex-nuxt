@@ -6,7 +6,6 @@ export interface ConvexAutoImport {
 }
 
 export const convexAutoImports: readonly ConvexAutoImport[] = [
-  { from: runtimeEntry, name: 'closeConvex' },
   { from: runtimeEntry, name: 'setupConvexAuth' },
   { from: runtimeEntry, name: 'useConvexAction' },
   { from: runtimeEntry, name: 'useConvexAuth' },

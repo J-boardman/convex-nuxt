@@ -60,7 +60,7 @@ const messages = useConvexPaginatedQuery(
 Available auto-imports are `useConvexQuery`, `useConvexQueries`,
 `useConvexPaginatedQuery`,
 `useConvexMutation`, `useConvexAction`, `setupConvexAuth`, `useConvexAuth`,
-`useConvexClient`, `useConvexConnectionState`, and `closeConvex`.
+`useConvexClient`, and `useConvexConnectionState`.
 
 Set `convex.autoImports` to `false` to disable them, then import from
 `@j-boardman/convex-nuxt/runtime` explicitly.

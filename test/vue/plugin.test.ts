@@ -3,7 +3,6 @@ import { createSSRApp } from 'vue'
 import type { App } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
 import {
-  closeConvex,
   createConvexVuePlugin,
   useConvexClient,
 } from '../../packages/vue/src/plugin.js'
@@ -39,28 +38,6 @@ function install(
 }
 
 describe('convexVue', () => {
-  it('reuses one client when the same application is initialized again', () => {
-    const app = createSSRApp({})
-    const fake = createFakeClient()
-    const createClient = vi.fn(() => fake.client)
-
-    install(app, 'https://one.convex.cloud', createClient)
-    install(app, 'https://one.convex.cloud', createClient)
-
-    expect(createClient).toHaveBeenCalledTimes(1)
-    expect(app.runWithContext(useConvexClient)).toBe(fake.client)
-  })
-
-  it('rejects a different deployment in the same application', () => {
-    const app = createSSRApp({})
-    const fake = createFakeClient()
-
-    install(app, 'https://one.convex.cloud', () => fake.client)
-
-    expect(() => install(app, 'https://two.convex.cloud', () => fake.client))
-      .toThrow('Convex is already installed in this Vue application')
-  })
-
   it('isolates clients owned by different Vue applications', () => {
     const firstApp = createSSRApp({})
     const secondApp = createSSRApp({})
@@ -117,20 +94,18 @@ describe('convexVue', () => {
     )
   })
 
-  it('closes its client once and permits a fresh runtime', async () => {
+  it('closes its client when the application unmounts', () => {
     const app = createSSRApp({})
-    const first = createFakeClient()
-    const second = createFakeClient()
+    const fake = createFakeClient()
+    const unmountHooks: (() => void)[] = []
+    app.onUnmount = (hook) => {
+      unmountHooks.push(hook)
+    }
 
-    install(app, 'https://one.convex.cloud', () => first.client)
+    install(app, 'https://one.convex.cloud', () => fake.client)
+    unmountHooks.forEach(hook => hook())
 
-    await app.runWithContext(closeConvex)
-    await app.runWithContext(closeConvex)
-
-    expect(first.close).toHaveBeenCalledTimes(1)
-
-    install(app, 'https://two.convex.cloud', () => second.client)
-    expect(app.runWithContext(useConvexClient)).toBe(second.client)
+    expect(fake.close).toHaveBeenCalledOnce()
   })
 
   it('names the missing installation in its diagnostic', () => {

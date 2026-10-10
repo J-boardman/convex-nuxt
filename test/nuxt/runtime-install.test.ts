@@ -17,10 +17,7 @@ describe('Nuxt runtime installation', () => {
     })
 
     const runtime = app.runWithContext(useConvexRuntime)
-    expect(runtime).toMatchObject({
-      client: null,
-      url: 'https://calm-wren-123.convex.cloud',
-    })
+    expect(runtime.client).toBeNull()
     expect(resolveConvexRuntimeOptions({
       url: 'https://calm-wren-123.convex.cloud',
     }).ssr).toBe(true)

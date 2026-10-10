@@ -16,9 +16,7 @@ export interface ConvexVueRuntime {
   auth?: ConvexAuthController
   authEpoch: ShallowRef<number>
   client: ConvexClient | null
-  close: () => Promise<void>
   querySubscriptionsStarted: boolean
-  url: string
 }
 
 interface ConvexVuePluginDependencies {
@@ -29,7 +27,6 @@ interface ConvexVuePluginDependencies {
 const convexVueRuntimeKey: InjectionKey<ConvexVueRuntime> = Symbol.for(
   '@j-boardman/convex-vue/runtime',
 )
-const appRuntimes = new WeakMap<App, ConvexVueRuntime>()
 
 const defaultDependencies: ConvexVuePluginDependencies = {
   createClient: (url, options) => new ConvexClient(url, options),
@@ -62,47 +59,18 @@ export function createConvexVuePlugin(
   return {
     install(app: App, suppliedOptions: ConvexVueOptions): void {
       const options = validateOptions(suppliedOptions)
-      const existing = appRuntimes.get(app)
-
-      if (existing) {
-        if (existing.url !== options.url) {
-          throw new Error(
-            `Convex is already installed in this Vue application for ${existing.url}. `
-            + `Close that runtime before installing ${options.url}.`,
-          )
-        }
-        app.provide(convexVueRuntimeKey, existing)
-        return
-      }
-
       const client = dependencies.isBrowser()
         ? dependencies.createClient(options.url, options.client ?? {})
         : null
-      let closePromise: Promise<void> | undefined
 
-      const runtime: ConvexVueRuntime = {
+      app.provide(convexVueRuntimeKey, {
         authEpoch: shallowRef(0),
         client,
-        close(): Promise<void> {
-          closePromise ??= (async () => {
-            if (client && !client.closed) {
-              await client.close()
-            }
-            if (appRuntimes.get(app) === runtime) {
-              appRuntimes.delete(app)
-            }
-          })()
-          return closePromise
-        },
         querySubscriptionsStarted: false,
-        url: options.url,
-      }
-
-      appRuntimes.set(app, runtime)
-      app.provide(convexVueRuntimeKey, runtime)
-      app.onUnmount(() => {
-        void runtime.close()
       })
+      if (client) {
+        app.onUnmount(() => void client.close())
+      }
     },
   }
 }
@@ -121,8 +89,4 @@ export function useConvexClient(): ConvexClient {
     throw new Error('The Convex client for this Vue application is closed.')
   }
   return runtime.client
-}
-
-export function closeConvex(): Promise<void> {
-  return useConvexRuntime().close()
 }

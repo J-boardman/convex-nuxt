@@ -1,19 +1,12 @@
 import { execFileSync, spawn } from 'node:child_process'
-import { Buffer } from 'node:buffer'
-import {
-  generateKeyPairSync,
-  randomBytes,
-  sign as signPayload,
-} from 'node:crypto'
+import { randomBytes } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import {
   cp,
-  copyFile,
   mkdir,
   mkdtemp,
   rm,
   symlink,
-  writeFile,
 } from 'node:fs/promises'
 import { createServer } from 'node:net'
 import { homedir, tmpdir } from 'node:os'
@@ -24,72 +17,8 @@ import { fileURLToPath } from 'node:url'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm'
-const authAudience = 'convex-nuxt-live'
-const authIssuer = 'https://convex-nuxt-live.test'
-const authKeyId = 'convex-nuxt-live-key'
 // Upgrade deliberately: newer artifacts can require newer host libraries.
 const backendVersion = 'precompiled-2026-09-28-5c7cb5b'
-
-function encodeJson(value) {
-  return Buffer.from(JSON.stringify(value)).toString('base64url')
-}
-
-function createTestAuth() {
-  const { privateKey, publicKey } = generateKeyPairSync('rsa', {
-    modulusLength: 2048,
-  })
-  const publicJwk = {
-    ...publicKey.export({ format: 'jwk' }),
-    alg: 'RS256',
-    kid: authKeyId,
-    use: 'sig',
-  }
-  const jwks = Buffer.from(JSON.stringify({ keys: [publicJwk] }))
-    .toString('base64')
-  const authConfig = `
-import type { AuthConfig } from 'convex/server'
-
-export default {
-  providers: [{
-    type: 'customJwt',
-    applicationID: '${authAudience}',
-    issuer: '${authIssuer}',
-    jwks: 'data:application/json;base64,${jwks}',
-    algorithm: 'RS256',
-  }],
-} satisfies AuthConfig
-`.trimStart()
-
-  const now = Math.floor(Date.now() / 1000)
-  const token = (subject, session) => {
-    const encoded = `${encodeJson({
-      alg: 'RS256',
-      kid: authKeyId,
-      typ: 'JWT',
-    })}.${encodeJson({
-      aud: authAudience,
-      exp: now + 3600,
-      iat: now,
-      iss: authIssuer,
-      jti: session,
-      sub: subject,
-    })}`
-    const signature = signPayload('RSA-SHA256', Buffer.from(encoded), privateKey)
-      .toString('base64url')
-    return `${encoded}.${signature}`
-  }
-
-  const subjects = { alpha: 'live-user-alpha', beta: 'live-user-beta' }
-  return {
-    authConfig,
-    subjects,
-    users: {
-      alpha: token(subjects.alpha, 'alpha-initial'),
-      alphaRefresh: token(subjects.alpha, 'alpha-refresh'),
-      beta: token(subjects.beta, 'beta-initial'),
-    },
-  }
-}
 
 function run(command, args, options = {}) {
   return new Promise((resolveRun, rejectRun) => {
@@ -187,19 +116,9 @@ async function stopBackend(child) {
   await exited
 }
 
-async function runAgainst(convexUrl, testAuth) {
-  await run(pnpm, ['run', 'test:live:against'], {
-    env: {
-      ...process.env,
-      ...(testAuth
-        ? {
-            CONVEX_TEST_SUBJECT_ALPHA: testAuth.subjects.alpha,
-            CONVEX_TEST_SUBJECT_BETA: testAuth.subjects.beta,
-            CONVEX_TEST_USERS: JSON.stringify(testAuth.users),
-          }
-        : {}),
-      CONVEX_URL: convexUrl,
-    },
+function runAgainst(convexUrl) {
+  return run(pnpm, ['exec', 'playwright', 'test'], {
+    env: { ...process.env, CONVEX_URL: convexUrl },
   })
 }
 
@@ -215,24 +134,15 @@ else {
     let sitePort = await reservePort()
     while (sitePort === cloudPort) sitePort = await reservePort()
     const convexUrl = `http://127.0.0.1:${cloudPort}`
-    const testAuth = createTestAuth()
 
+    // Deploy a copy so the run cannot touch the developer's own deployment.
     await cp(
-      resolve(root, 'playgrounds/backend/convex'),
-      join(temporaryRoot, 'convex'),
-      { recursive: true },
-    )
-    await copyFile(
-      resolve(root, 'playgrounds/backend/convex.json'),
-      join(temporaryRoot, 'convex.json'),
-    )
-    await copyFile(
-      resolve(root, 'playgrounds/backend/package.json'),
-      join(temporaryRoot, 'package.json'),
-    )
-    await writeFile(
-      join(temporaryRoot, 'convex/auth.config.ts'),
-      testAuth.authConfig,
+      resolve(root, 'examples/backend'),
+      temporaryRoot,
+      {
+        filter: source => !/(?:node_modules|\.env\.local)$/.test(source),
+        recursive: true,
+      },
     )
     await symlink(
       resolve(root, 'node_modules'),
@@ -275,7 +185,7 @@ else {
         CONVEX_SELF_HOSTED_URL: convexUrl,
       },
     })
-    await runAgainst(convexUrl, testAuth)
+    await runAgainst(convexUrl)
   }
   finally {
     if (backend) await stopBackend(backend)

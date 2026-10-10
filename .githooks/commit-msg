@@ -65,11 +65,11 @@ if [ -n "$scope" ]; then
       docs/*|*.md) prose=yes ;;
     esac
     case "$scope:$file" in
-      vue:packages/vue/*|vue:playgrounds/vue/*) matches=yes ;;
-      nuxt:packages/nuxt/*|nuxt:playgrounds/nuxt/*) matches=yes ;;
+      vue:packages/vue/*|vue:examples/vue/*) matches=yes ;;
+      nuxt:packages/nuxt/*|nuxt:examples/nuxt/*) matches=yes ;;
       auth:*auth*|pagination:*pagination*) matches=yes ;;
       adapters:packages/vue/src/adapter/*|adapters:packages/nuxt/src/runtime/*) matches=yes ;;
-      playground:playgrounds/*) matches=yes ;;
+      playground:examples/*) matches=yes ;;
       ci:.github/*|ci:.githooks/*) matches=yes ;;
       build:package.json|build:tsconfig*|build:pnpm-lock.yaml|build:pnpm-workspace.yaml) matches=yes ;;
     esac

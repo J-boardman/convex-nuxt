@@ -6,7 +6,6 @@
 .output/
 coverage/
 dist/
-playgrounds/nuxt/dist
 node_modules/
 playwright-report/
 test-results/

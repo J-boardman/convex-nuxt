@@ -1,0 +1,17 @@
+{
+  "name": "@j-boardman/convex-example-backend",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "codegen": "convex codegen",
+    "dev": "convex dev",
+    "typecheck": "tsc --project convex/tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "convex": "1.45.0"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

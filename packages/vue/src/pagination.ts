@@ -1,4 +1,3 @@
-import type { ConvexClient } from 'convex/browser'
 import type {
   FunctionArgs,
   FunctionReference,
@@ -6,19 +5,10 @@ import type {
   PaginationOptions,
   PaginationResult,
 } from 'convex/server'
-import { getFunctionName } from 'convex/server'
-import { convexToJson, jsonToConvex } from 'convex/values'
 import type { Value } from 'convex/values'
-import {
-  getCurrentScope,
-  onScopeDispose,
-  shallowRef,
-  toValue,
-  watch,
-} from 'vue'
+import { shallowRef } from 'vue'
 import type { MaybeRefOrGetter } from 'vue'
-import { useConvexSsrBridge } from './adapter/ssr.js'
-import { useConvexRuntime } from './plugin.js'
+import { useLiveQuery } from './live-query.js'
 import type { ConvexQuerySkip } from './query.js'
 
 export type ConvexPaginatedQueryReference = FunctionReference<
@@ -84,32 +74,6 @@ interface PaginatedClient {
   ) => () => void
 }
 
-interface NormalizedArgs {
-  args: Record<string, Value>
-  key: string
-  skipped: false
-}
-
-interface NormalizedSkip {
-  skipped: true
-}
-
-function normalizeArgs(input: Record<string, Value> | ConvexQuerySkip): NormalizedArgs | NormalizedSkip {
-  if (input === 'skip') {
-    return { skipped: true }
-  }
-  const encoded = convexToJson(input)
-  return {
-    args: jsonToConvex(encoded) as Record<string, Value>,
-    key: JSON.stringify(encoded),
-    skipped: false,
-  }
-}
-
-function resultsFromState<T>(state: ConvexPaginatedQueryState<T>): T[] {
-  return state.results
-}
-
 function initialState<T>(
   data: PaginationResult<T> | undefined,
 ): ConvexPaginatedQueryState<T> {
@@ -145,85 +109,34 @@ export function useConvexPaginatedQuery<
   validateInitialNumItems(options.initialNumItems)
 
   type Item = ConvexPaginatedQueryItem<Query>
-  const runtime = useConvexRuntime()
-  const bridge = useConvexSsrBridge()
-  const serverRendering = options.server
-    ?? (bridge ? bridge.defaultServerRendering ?? true : false)
-  let initialNormalized: NormalizedArgs | NormalizedSkip
-  try {
-    initialNormalized = normalizeArgs(
-      toValue(argsInput) as Record<string, Value> | ConvexQuerySkip,
-    )
-  }
-  catch {
-    initialNormalized = { skipped: true }
-  }
-  const initialKey = initialNormalized.skipped
-    ? undefined
-    : initialNormalized.key
-  if (
-    serverRendering
-    && !runtime.client
-    && !bridge
-    && options.initialData === undefined
-    && !initialNormalized.skipped
-  ) {
-    throw new Error(
-      'useConvexPaginatedQuery() cannot server-render without a Convex SSR adapter or initialData. '
-      + 'Install a framework adapter, pass initialData, or set server to false.',
-    )
-  }
-  const seed = bridge?.useQuerySeed<PaginationResult<Item>>({
-    args: initialNormalized.skipped
-      ? {}
-      : {
-          ...initialNormalized.args,
-          paginationOpts: {
-            cursor: null,
-            numItems: options.initialNumItems,
-          },
-        },
-    enabled: serverRendering
-      && options.initialData === undefined
-      && !initialNormalized.skipped,
-    key: `${getFunctionName(query)}:pagination:${options.initialNumItems}:${initialKey ?? 'skip'}`,
-    query,
+  const { initialNumItems } = options
+  const state = shallowRef<ConvexPaginatedQueryState<Item>>({
+    status: 'pending',
+    results: [],
   })
-  const seededData = options.initialData ?? seed?.data.value
-  const state = shallowRef<ConvexPaginatedQueryState<Item>>(
-    initialState(seededData),
-  )
-  let currentKey: string | undefined
-  let currentAuthEpoch: number | undefined
-  let generation = 0
-  let hasStarted = false
   let invalidCursorResetAvailable = true
-  let seedActive = options.initialData === undefined
-  let stopped = false
-  let unsubscribe: (() => void) | undefined
   let liveLoadMore: ((numItems: number) => boolean) | undefined
   let queuedLoadMore: number | undefined
 
-  const stopSubscription = (): void => {
-    unsubscribe?.()
-    unsubscribe = undefined
-    liveLoadMore = undefined
+  const fail = (error: Error): void => {
+    state.value = { status: 'error', results: state.value.results, error }
   }
 
-  const publishClientResult = (
-    result: ClientPaginationResult<Item>,
-  ): void => {
-    seedActive = false
+  const showFirstPageLoading = (): void => {
+    const previous = state.value.results
+    state.value = previous.length > 0
+      ? { status: 'stale', results: previous }
+      : { status: 'pending', results: [] }
+  }
+
+  const publishClientResult = (result: ClientPaginationResult<Item>): void => {
     liveLoadMore = result.loadMore
     if (result.status === 'CanLoadMore' || result.status === 'Exhausted') {
       invalidCursorResetAvailable = true
     }
 
     if (result.status === 'LoadingFirstPage') {
-      const previous = resultsFromState(state.value)
-      state.value = previous.length > 0
-        ? { status: 'stale', results: previous }
-        : { status: 'pending', results: [] }
+      showFirstPageLoading()
     }
     else if (result.status === 'CanLoadMore') {
       state.value = { status: 'ready', results: result.results, canLoadMore: true }
@@ -244,118 +157,24 @@ export function useConvexPaginatedQuery<
     }
   }
 
-  const subscribe = (normalized: NormalizedArgs): void => {
-    if (!runtime.client || runtime.client.closed) return
-    runtime.querySubscriptionsStarted = true
-    generation += 1
-    const subscriptionGeneration = generation
-    const client = runtime.client as ConvexClient & PaginatedClient
-    unsubscribe = client.onPaginatedUpdate_experimental(
-      query,
-      normalized.args,
-      { initialNumItems: options.initialNumItems },
-      (result) => {
-        if (!stopped && subscriptionGeneration === generation) {
-          publishClientResult(result as ClientPaginationResult<Item>)
-        }
-      },
-      (error) => {
-        if (stopped || subscriptionGeneration !== generation) return
-        seedActive = false
-        if (isInvalidCursorError(error) && invalidCursorResetAvailable) {
-          invalidCursorResetAvailable = false
-          const previous = resultsFromState(state.value)
-          stopSubscription()
-          state.value = previous.length > 0
-            ? { status: 'stale', results: previous }
-            : { status: 'pending', results: [] }
-          subscribe(normalized)
-          return
-        }
-        state.value = {
-          status: 'error',
-          results: resultsFromState(state.value),
-          error,
-        }
-      },
-    )
-  }
-
-  const stopSeedWatch = seed
-    ? watch(
-        [seed.data, seed.error, seed.pending],
-        ([data, error, pending]) => {
-          if (!seedActive || stopped) return
-          if (error) {
-            state.value = {
-              status: 'error',
-              results: resultsFromState(state.value),
-              error,
-            }
-          }
-          else if (!pending && data) {
-            state.value = initialState(data)
-          }
-        },
-        { immediate: true, flush: 'sync' },
-      )
-    : undefined
-
-  const stopWatching = watch(
-    [() => toValue(argsInput), runtime.authEpoch],
-    ([input, authEpoch]) => {
-      if (stopped) return
-
-      let normalized: NormalizedArgs | NormalizedSkip
-      try {
-        normalized = normalizeArgs(
-          input as Record<string, Value> | ConvexQuerySkip,
-        )
-      }
-      catch (cause) {
-        generation += 1
-        currentKey = undefined
-        currentAuthEpoch = authEpoch
-        stopSubscription()
-        state.value = {
-          status: 'error',
-          results: resultsFromState(state.value),
-          error: cause instanceof Error ? cause : new Error(String(cause)),
-        }
-        return
-      }
-
-      if (normalized.skipped) {
-        seedActive = false
-        generation += 1
-        currentKey = undefined
-        currentAuthEpoch = authEpoch
-        queuedLoadMore = undefined
-        stopSubscription()
-        state.value = { status: 'skipped', results: [] }
-        hasStarted = true
-        return
-      }
-      if (
-        normalized.key === currentKey
-        && authEpoch === currentAuthEpoch
-      ) return
-
-      const authenticationChanged = currentAuthEpoch !== undefined
-        && authEpoch !== currentAuthEpoch
-      const previous = resultsFromState(state.value)
-      if (normalized.key !== initialKey || authenticationChanged) {
-        seedActive = false
-      }
-      generation += 1
-      currentKey = normalized.key
-      currentAuthEpoch = authEpoch
-      queuedLoadMore = undefined
+  const lifecycle = useLiveQuery<PaginationResult<Item>>({
+    args: argsInput,
+    composable: 'useConvexPaginatedQuery()',
+    initialData: options.initialData,
+    query,
+    seedArgs: args => ({
+      ...args,
+      paginationOpts: { cursor: null, numItems: initialNumItems },
+    }),
+    seedKey: `pagination:${initialNumItems}:`,
+    server: options.server,
+    begin(initialData, authenticationChanged) {
       invalidCursorResetAvailable = true
-      stopSubscription()
-
-      if (!hasStarted && seededData && !authenticationChanged) {
-        state.value = initialState(seededData)
+      liveLoadMore = undefined
+      queuedLoadMore = undefined
+      const previous = state.value.results
+      if (initialData) {
+        state.value = initialState(initialData)
       }
       else if (
         !authenticationChanged
@@ -367,25 +186,37 @@ export function useConvexPaginatedQuery<
       else {
         state.value = { status: 'pending', results: [] }
       }
-      hasStarted = true
-      subscribe(normalized)
     },
-    { deep: true, immediate: true, flush: 'sync' },
-  )
-
-  const stop = (): void => {
-    if (stopped) return
-    stopped = true
-    generation += 1
-    queuedLoadMore = undefined
-    stopSubscription()
-    stopWatching()
-    stopSeedWatch?.()
-  }
-
-  if (getCurrentScope()) {
-    onScopeDispose(stop)
-  }
+    failed: fail,
+    seeded(data) {
+      state.value = initialState(data)
+    },
+    skipped() {
+      liveLoadMore = undefined
+      queuedLoadMore = undefined
+      state.value = { status: 'skipped', results: [] }
+    },
+    subscribe: (client, args, live) => (
+      client as typeof client & PaginatedClient
+    ).onPaginatedUpdate_experimental(
+      query,
+      args,
+      { initialNumItems },
+      live((result: ClientPaginationResult<unknown>) => {
+        publishClientResult(result as ClientPaginationResult<Item>)
+      }),
+      live((error: Error) => {
+        if (isInvalidCursorError(error) && invalidCursorResetAvailable) {
+          invalidCursorResetAvailable = false
+          liveLoadMore = undefined
+          showFirstPageLoading()
+          lifecycle.resubscribe()
+          return
+        }
+        fail(error)
+      }),
+    ),
+  })
 
   return {
     get error(): Error | undefined {
@@ -399,7 +230,7 @@ export function useConvexPaginatedQuery<
       return state.value.status === 'stale'
     },
     get results(): Item[] {
-      return resultsFromState(state.value)
+      return state.value.results
     },
     get state(): ConvexPaginatedQueryState<Item> {
       return state.value
@@ -425,6 +256,6 @@ export function useConvexPaginatedQuery<
       }
       return accepted
     },
-    stop,
+    stop: lifecycle.stop,
   }
 }

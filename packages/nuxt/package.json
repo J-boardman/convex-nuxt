@@ -37,12 +37,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/j-boardman/convex-nuxt.git",
+    "url": "git+https://github.com/J-boardman/convex-nuxt.git",
     "directory": "packages/nuxt"
   },
-  "homepage": "https://github.com/j-boardman/convex-nuxt#readme",
+  "homepage": "https://github.com/J-boardman/convex-nuxt#readme",
   "bugs": {
-    "url": "https://github.com/j-boardman/convex-nuxt/issues"
+    "url": "https://github.com/J-boardman/convex-nuxt/issues"
   },
   "publishConfig": {
     "access": "public",

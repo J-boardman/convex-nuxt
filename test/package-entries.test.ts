@@ -58,14 +58,14 @@ describe.each(packageManifestPaths)('%s', (manifestPath) => {
 
     expect(manifest.repository).toMatchObject({
       type: 'git',
-      url: 'git+https://github.com/j-boardman/convex-nuxt.git',
+      url: 'git+https://github.com/J-boardman/convex-nuxt.git',
     })
     expect(manifest.repository.directory).toMatch(/^packages\/(vue|nuxt)$/)
     expect(manifest.homepage).toBe(
-      'https://github.com/j-boardman/convex-nuxt#readme',
+      'https://github.com/J-boardman/convex-nuxt#readme',
     )
     expect(manifest.bugs.url).toBe(
-      'https://github.com/j-boardman/convex-nuxt/issues',
+      'https://github.com/J-boardman/convex-nuxt/issues',
     )
     expect(manifest.keywords).toContain('convex')
     expect(manifest.main).toBe(primaryExport?.import)

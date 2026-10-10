@@ -363,28 +363,4 @@ describe('useConvexQuery', () => {
     expect(harness.subscriptions[0]?.unsubscribe).toHaveBeenCalledOnce()
     expect(harness.subscriptions[1]?.args).toEqual({ channel: 'random' })
   })
-
-  it('settles suspense from success, error, and skip states', async () => {
-    const successHarness = createHarness()
-    const success = withinHarness(successHarness, () =>
-      useConvexQuery(messagesQuery, { channel: 'general' }),
-    )
-    const successPromise = success.suspense()
-    successHarness.subscriptions[0]?.update(['ready'])
-    await expect(successPromise).resolves.toEqual(['ready'])
-
-    const errorHarness = createHarness()
-    const failed = withinHarness(errorHarness, () =>
-      useConvexQuery(messagesQuery, { channel: 'general' }),
-    )
-    const errorPromise = failed.suspense()
-    errorHarness.subscriptions[0]?.error(new Error('nope'))
-    await expect(errorPromise).rejects.toThrow('nope')
-
-    const skipHarness = createHarness()
-    const skipped = withinHarness(skipHarness, () =>
-      useConvexQuery(messagesQuery, 'skip'),
-    )
-    await expect(skipped.suspense()).resolves.toBeUndefined()
-  })
 })

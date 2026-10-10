@@ -41,7 +41,6 @@ export interface UseConvexQueryResult<T> {
   readonly isStale: boolean
   readonly state: ConvexQueryState<T>
   stop: () => void
-  suspense: () => Promise<T | undefined>
 }
 
 export type ReactiveQueryArgsAndOptions<
@@ -59,11 +58,6 @@ interface NormalizedArgs {
 
 interface NormalizedSkip {
   skipped: true
-}
-
-interface SuspenseWaiter<T> {
-  reject: (reason: Error) => void
-  resolve: (value: T | undefined) => void
 }
 
 function normalizeArgs(input: Record<string, Value> | ConvexQuerySkip): NormalizedArgs | NormalizedSkip {
@@ -147,7 +141,6 @@ export function useConvexQuery<Query extends FunctionReference<'query'>>(
   })
   const initialData = options.initialData ?? seed?.data.value
   const state = shallowRef<ConvexQueryState<QueryResult>>({ status: 'pending' })
-  const waiters = new Set<SuspenseWaiter<QueryResult>>()
   let currentKey: string | undefined
   let currentAuthEpoch: number | undefined
   let generation = 0
@@ -158,24 +151,6 @@ export function useConvexQuery<Query extends FunctionReference<'query'>>(
 
   const publish = (nextState: ConvexQueryState<QueryResult>): void => {
     state.value = nextState
-    if (nextState.status === 'success') {
-      for (const waiter of waiters) {
-        waiter.resolve(nextState.data)
-      }
-      waiters.clear()
-    }
-    else if (nextState.status === 'skipped') {
-      for (const waiter of waiters) {
-        waiter.resolve(undefined)
-      }
-      waiters.clear()
-    }
-    else if (nextState.status === 'error') {
-      for (const waiter of waiters) {
-        waiter.reject(nextState.error)
-      }
-      waiters.clear()
-    }
   }
 
   const stopSubscription = (): void => {
@@ -302,11 +277,6 @@ export function useConvexQuery<Query extends FunctionReference<'query'>>(
     stopSubscription()
     stopWatching()
     stopSeedWatch?.()
-    const cancellation = new Error('The Convex query was stopped.')
-    for (const waiter of waiters) {
-      waiter.reject(cancellation)
-    }
-    waiters.clear()
   }
 
   if (getCurrentScope()) {
@@ -330,23 +300,6 @@ export function useConvexQuery<Query extends FunctionReference<'query'>>(
       return state.value
     },
     stop,
-    suspense(): Promise<QueryResult | undefined> {
-      if (state.value.status === 'success') {
-        return Promise.resolve(state.value.data)
-      }
-      if (state.value.status === 'skipped') {
-        return Promise.resolve(undefined)
-      }
-      if (state.value.status === 'error') {
-        return Promise.reject(state.value.error)
-      }
-      if (stopped) {
-        return Promise.reject(new Error('The Convex query was stopped.'))
-      }
-      return new Promise<QueryResult | undefined>((resolve, reject) => {
-        waiters.add({ reject, resolve })
-      })
-    },
   }
 
   return result

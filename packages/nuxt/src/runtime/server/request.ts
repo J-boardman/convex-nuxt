@@ -1,6 +1,7 @@
 import { ConvexHttpClient } from 'convex/browser'
 import type { H3Event } from 'h3'
-import { resolveConvexRuntimeOptions } from '../config.js'
+import { deploymentUrl } from '../config.js'
+import type { ConvexNuxtPublicRuntimeConfig } from '../config.js'
 
 export type ConvexHttpClientOptions = Omit<
   NonNullable<ConstructorParameters<typeof ConvexHttpClient>[1]>,
@@ -18,7 +19,7 @@ export interface ConvexServerRequestContext {
 
 export interface CreateConvexRequestClientOptions {
   clientOptions?: ConvexHttpClientOptions
-  config: unknown
+  config: ConvexNuxtPublicRuntimeConfig | undefined
   event: H3Event
   token?: string | null
 }
@@ -41,7 +42,13 @@ async function resolveServerToken(
 export async function createConvexHttpClientForRequest(
   options: CreateConvexRequestClientOptions,
 ): Promise<ConvexHttpClient> {
-  const { url } = resolveConvexRuntimeOptions(options.config)
+  const url = deploymentUrl(options.config)
+  if (!url) {
+    throw new Error(
+      'Convex requires runtimeConfig.public.convex.url. '
+      + 'Set convex.url in nuxt.config.ts or NUXT_PUBLIC_CONVEX_URL.',
+    )
+  }
   const token = options.token === undefined
     ? await resolveServerToken(options.event)
     : options.token

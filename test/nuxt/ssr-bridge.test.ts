@@ -3,15 +3,11 @@ import type { PaginationOptions, PaginationResult } from 'convex/server'
 import type { JSONValue, Value } from 'convex/values'
 import { ref } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
-import {
-  createNuxtSsrBridge,
-} from '../../packages/nuxt/src/runtime/ssr-bridge-core'
-import type {
-  NuxtSsrBridgeDependencies,
-} from '../../packages/nuxt/src/runtime/ssr-bridge-core'
+import { createNuxtSsrBridge } from '../../packages/nuxt/src/runtime/bridge'
+import type { NuxtBridgeDependencies } from '../../packages/nuxt/src/runtime/bridge'
 
 interface SeedHarness {
-  dependencies: NuxtSsrBridgeDependencies
+  dependencies: NuxtBridgeDependencies
   pendingTasks: Promise<void>[]
 }
 
@@ -20,9 +16,11 @@ function createSeedHarness(
   loadQuery: () => Promise<Value>,
 ): SeedHarness {
   const pendingTasks: Promise<void>[] = []
-  const dependencies: NuxtSsrBridgeDependencies = {
+  const dependencies: NuxtBridgeDependencies = {
     createQueryLoader: vi.fn(() => loadQuery),
-    useAsyncData(key, handler, enabled) {
+    prepareServerToken: vi.fn(),
+    useAuthData: vi.fn(),
+    useQueryData(key, handler, enabled) {
       const cached = payload.get(key)
       const data = ref<JSONValue | undefined>(cached)
       const error = ref<unknown>()

@@ -1,21 +1,22 @@
 import { ref } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
-import {
-  useNuxtAuthSeed,
-} from '../../packages/nuxt/src/runtime/auth-seed-core'
+import type { ConvexAuthSeedRequest } from '../../packages/vue/src/adapter/ssr'
+import { createNuxtSsrBridge } from '../../packages/nuxt/src/runtime/bridge'
 import type {
-  NuxtAuthSeedDependencies,
   NuxtAuthSeedValue,
-} from '../../packages/nuxt/src/runtime/auth-seed-core'
+  NuxtBridgeDependencies,
+} from '../../packages/nuxt/src/runtime/bridge'
 
 function createAuthPayloadHarness(
   payload: Map<string, NuxtAuthSeedValue>,
   loadToken: (() => Promise<string | null>) | undefined,
 ) {
   const pendingTasks: Promise<void>[] = []
-  const dependencies: NuxtAuthSeedDependencies = {
+  const dependencies: NuxtBridgeDependencies = {
+    createQueryLoader: vi.fn(),
     prepareServerToken: vi.fn(() => loadToken),
-    useAsyncData(key, handler, executeOnServer) {
+    useQueryData: vi.fn(),
+    useAuthData(key, handler, executeOnServer) {
       const cached = payload.get(key)
       const data = ref<NuxtAuthSeedValue | undefined>(cached)
       if (!cached && executeOnServer) {
@@ -28,6 +29,14 @@ function createAuthPayloadHarness(
     },
   }
   return { dependencies, pendingTasks }
+}
+
+function useNuxtAuthSeed(
+  deploymentUrl: string,
+  request: ConvexAuthSeedRequest,
+  dependencies: NuxtBridgeDependencies,
+) {
+  return createNuxtSsrBridge(deploymentUrl, dependencies).useAuthSeed!(request)
 }
 
 describe('Nuxt auth seed', () => {

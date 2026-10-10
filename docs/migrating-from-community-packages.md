@@ -66,7 +66,7 @@ or module options.
 | `useConvexQuery` | `useConvexQuery` | Returns one explicit `pending`, `success`, `stale`, `error`, or `skipped` state machine. |
 | Dynamic query collection | `useConvexQueries` | A reactive keyed request map produces one atomically published state snapshot. |
 | `useConvexMutation` returning `{ mutate }` | Callable `useConvexMutation` result | Await the callable directly; its resolved value is the generated mutation return type. |
-| Optimistic mutation | `.withOptimisticUpdate(...)` or per-call options | Uses Convex's local store, reconciliation, and rollback behavior. |
+| Optimistic mutation | `.withOptimisticUpdate(...)` | Uses Convex's local store, reconciliation, and rollback behavior. |
 | Missing or custom action helper | `useConvexAction` | The callable preserves generated action arguments and return types. |
 | Missing or custom pagination | `useConvexPaginatedQuery` | The composable owns `paginationOpts`, cursor resets, and early `loadMore`. |
 | Manual `client.setAuth` plugin | `setupConvexAuth` | Provider state and Convex token confirmation remain distinct. |

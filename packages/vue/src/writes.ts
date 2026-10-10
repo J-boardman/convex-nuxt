@@ -1,8 +1,6 @@
 import type { OptimisticUpdate } from 'convex/browser'
 import type { ConvexClient } from 'convex/browser'
-import type { Value } from 'convex/values'
 import type {
-  ArgsAndOptions,
   FunctionArgs,
   FunctionReference,
   FunctionReturnType,
@@ -20,21 +18,8 @@ type SynchronousOptimisticUpdate<Update> = Update extends (
     )
   : never
 
-export interface ConvexMutationOptions<
-  Args extends Record<string, Value>,
-  Update extends OptimisticUpdate<Args> = OptimisticUpdate<Args>,
-> {
-  optimisticUpdate?: SynchronousOptimisticUpdate<Update>
-}
-
 export interface ConvexMutation<Mutation extends FunctionReference<'mutation'>> {
   (...args: OptionalRestArgs<Mutation>): Promise<FunctionReturnType<Mutation>>
-  <Update extends OptimisticUpdate<FunctionArgs<Mutation>>>(
-    ...args: ArgsAndOptions<
-      Mutation,
-      ConvexMutationOptions<FunctionArgs<Mutation>, Update>
-    >
-  ): Promise<FunctionReturnType<Mutation>>
   withOptimisticUpdate<T extends OptimisticUpdate<FunctionArgs<Mutation>>>(
     update: SynchronousOptimisticUpdate<T>,
   ): ConvexMutation<Mutation>
@@ -49,29 +34,11 @@ function createMutation<Mutation extends FunctionReference<'mutation'>>(
   client: ConvexClient,
   optimisticUpdate?: OptimisticUpdate<FunctionArgs<Mutation>>,
 ): ConvexMutation<Mutation> {
-  const execute = (
-    ...args: ArgsAndOptions<
-      Mutation,
-      ConvexMutationOptions<FunctionArgs<Mutation>>
-    >
-  ): Promise<FunctionReturnType<Mutation>> => {
-    const mutationArgs = (args[0] ?? {}) as FunctionArgs<Mutation>
-    const perCallUpdate = args[1]?.optimisticUpdate
-    if (optimisticUpdate && perCallUpdate) {
-      throw new Error(
-        'This Convex mutation already has an optimistic update. '
-        + 'Remove either the fluent or per-call update.',
-      )
-    }
-    return client.mutation(mutation, mutationArgs, {
-      optimisticUpdate: perCallUpdate ?? optimisticUpdate,
-    })
-  }
-
-  const callable = execute as ConvexMutation<Mutation>
-  callable.withOptimisticUpdate = <T extends OptimisticUpdate<FunctionArgs<Mutation>>>(
-    update: SynchronousOptimisticUpdate<T>,
-  ): ConvexMutation<Mutation> => {
+  const callable = ((...args: OptionalRestArgs<Mutation>) =>
+    client.mutation(mutation, (args[0] ?? {}) as FunctionArgs<Mutation>, {
+      optimisticUpdate,
+    })) as ConvexMutation<Mutation>
+  callable.withOptimisticUpdate = (update) => {
     if (optimisticUpdate) {
       throw new Error('This Convex mutation already has an optimistic update.')
     }

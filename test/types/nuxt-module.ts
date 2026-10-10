@@ -1,7 +1,6 @@
 import type { ModuleOptions } from '@j-boardman/convex-nuxt'
 
 const supported: ModuleOptions = {
-  autoImports: false,
   client: {
     skipConvexDeploymentUrlCheck: true,
     unsavedChangesWarning: false,

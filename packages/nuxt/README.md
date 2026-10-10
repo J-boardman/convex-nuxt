@@ -62,8 +62,7 @@ Available auto-imports are `useConvexQuery`, `useConvexQueries`,
 `useConvexMutation`, `useConvexAction`, `setupConvexAuth`, `useConvexAuth`,
 `useConvexClient`, and `useConvexConnectionState`.
 
-Set `convex.autoImports` to `false` to disable them, then import from
-`@j-boardman/convex-nuxt/runtime` explicitly.
+They can also be imported explicitly from `@j-boardman/convex-nuxt/runtime`.
 
 ## SSR and hydration
 
@@ -147,7 +146,6 @@ cannot share authentication.
 ```ts
 interface ModuleOptions {
   url?: string
-  autoImports?: boolean // default: true
   ssr?: boolean // default: true
   client?: {
     skipConvexDeploymentUrlCheck?: boolean

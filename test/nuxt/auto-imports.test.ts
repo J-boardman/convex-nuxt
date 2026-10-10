@@ -1,26 +1,11 @@
 import * as runtime from '../../packages/nuxt/src/runtime/index'
 import { describe, expect, it } from 'vitest'
-import { convexAutoImports } from '../../packages/nuxt/src/auto-imports'
+import { convexComposables } from '../../packages/nuxt/src/module'
 
 describe('Nuxt Convex auto-imports', () => {
-  it('resolve every generated name to the shared Vue runtime', () => {
-    expect(convexAutoImports.map(entry => entry.name)).toEqual([
-      'setupConvexAuth',
-      'useConvexAction',
-      'useConvexAuth',
-      'useConvexClient',
-      'useConvexConnectionState',
-      'useConvexMutation',
-      'useConvexPaginatedQuery',
-      'useConvexQuery',
-      'useConvexQueries',
-    ])
-    expect(convexAutoImports.every(
-      entry => entry.from === '@j-boardman/convex-nuxt/runtime',
-    )).toBe(true)
-
-    for (const entry of convexAutoImports) {
-      expect(runtime[entry.name as keyof typeof runtime]).toBeTypeOf('function')
+  it('name only functions the runtime entry exports', () => {
+    for (const name of convexComposables) {
+      expect(runtime[name]).toBeTypeOf('function')
     }
   })
 })

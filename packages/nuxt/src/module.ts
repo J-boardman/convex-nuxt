@@ -1,7 +1,6 @@
 import { addImports, addPlugin, createResolver, defineNuxtModule } from '@nuxt/kit'
 import type { NuxtModule } from '@nuxt/schema'
 import { defu } from 'defu'
-import { convexAutoImports } from './auto-imports.js'
 import type {
   ConvexNuxtClientOptions,
   ConvexNuxtPublicRuntimeConfig,
@@ -9,8 +8,20 @@ import type {
 
 export type { ConvexNuxtClientOptions } from './runtime/config.js'
 
+/** @internal */
+export const convexComposables = [
+  'setupConvexAuth',
+  'useConvexAction',
+  'useConvexAuth',
+  'useConvexClient',
+  'useConvexConnectionState',
+  'useConvexMutation',
+  'useConvexPaginatedQuery',
+  'useConvexQuery',
+  'useConvexQueries',
+] as const
+
 export interface ModuleOptions {
-  autoImports?: boolean
   client?: ConvexNuxtClientOptions
   ssr?: boolean
   url?: string
@@ -25,7 +36,6 @@ const convexNuxtModule: NuxtModule<ModuleOptions> = defineNuxtModule<ModuleOptio
     },
   },
   defaults: {
-    autoImports: true,
     client: {},
     ssr: true,
   },
@@ -47,9 +57,10 @@ const convexNuxtModule: NuxtModule<ModuleOptions> = defineNuxtModule<ModuleOptio
       src: resolver.resolve('./runtime/plugin'),
     })
 
-    if (options.autoImports) {
-      addImports([...convexAutoImports])
-    }
+    addImports(convexComposables.map(name => ({
+      from: '@j-boardman/convex-nuxt/runtime',
+      name,
+    })))
   },
 })
 

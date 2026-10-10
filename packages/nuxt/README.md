@@ -120,26 +120,22 @@ targeted message instead of allowing an unauthenticated subscription race.
 The repository's [auth adapter guide](https://github.com/J-boardman/convex-nuxt/blob/main/docs/auth-adapters.md)
 shows the provider contract and the first-party Convex Auth v2 H3/SSR design.
 
-## Server routes and middleware
+## Server routes
 
-Server-only helpers live in a separate export:
+Server routes have no Nuxt app, so they call Convex with its own HTTP client.
+Create one per request, and pass the caller's token if the query needs auth:
 
 ```ts
-import {
-  setConvexServerToken,
-  useConvexHttpClient,
-} from '@j-boardman/convex-nuxt/server'
+// server/api/tasks.get.ts
+import { ConvexHttpClient } from 'convex/browser'
+import { api } from '~~/convex/_generated/api'
 
 export default defineEventHandler(async (event) => {
-  setConvexServerToken(event, () => getTokenFromRequest(event))
-  const client = await useConvexHttpClient({ event })
-  return await client.query(api.viewer.get, {})
+  const { url } = useRuntimeConfig(event).public.convex
+  const client = new ConvexHttpClient(url!, { auth: await tokenFor(event) })
+  return await client.query(api.tasks.list, {})
 })
 ```
-
-An explicit `token` passed to `useConvexHttpClient` overrides the token stored
-on the request. Each operation gets a fresh HTTP client; concurrent requests
-cannot share authentication.
 
 ## Module options
 
@@ -154,9 +150,7 @@ interface ModuleOptions {
 }
 ```
 
-Only JSON-serializable browser options belong in Nuxt config. Use the server
-entry for one-shot server operations and the runtime entry for explicit browser
-imports. Function-valued browser options such as custom loggers and WebSocket
+Only JSON-serializable browser options belong in Nuxt config. Function-valued browser options such as custom loggers and WebSocket
 constructors are available to plain Vue installation, but are rejected here
 instead of being silently discarded by Nuxt runtime-config serialization.
 

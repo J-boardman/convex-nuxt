@@ -15,8 +15,10 @@ import type { Plugin } from 'nuxt/app'
 import { createNuxtSsrBridge } from './bridge.js'
 import type { NuxtBridgeDependencies } from './bridge.js'
 import { deploymentUrl } from './config.js'
+import { createRequestClient } from './request.js'
 
 function createQueryLoader(
+  url: string,
   request: ConvexQuerySeedRequest,
 ): () => Promise<Value> {
   if (import.meta.server) {
@@ -24,13 +26,8 @@ function createQueryLoader(
     if (!event) {
       throw new Error('Convex SSR queries require an active Nuxt request.')
     }
-    const config = useRuntimeConfig(event).public.convex
-
     return async () => {
-      const { createConvexHttpClientForRequest } = await import(
-        './server/request.js'
-      )
-      const client = await createConvexHttpClientForRequest({ config, event })
+      const client = await createRequestClient(url, event)
       return await client.query(request.query, request.args) as Value
     }
   }
@@ -57,8 +54,8 @@ function prepareServerToken(
   return loadToken
 }
 
-const dependencies: NuxtBridgeDependencies = {
-  createQueryLoader,
+const dependencies = (url: string): NuxtBridgeDependencies => ({
+  createQueryLoader: request => createQueryLoader(url, request),
   prepareServerToken,
   useAuthData: (key, handler, executeOnServer) => useAsyncData(key, handler, {
     deep: false,
@@ -71,7 +68,7 @@ const dependencies: NuxtBridgeDependencies = {
     immediate: enabled,
     server: enabled,
   }),
-}
+})
 
 const convexNuxtPlugin: Plugin<Record<string, never>> = defineNuxtPlugin({
   name: 'convex',
@@ -85,7 +82,7 @@ const convexNuxtPlugin: Plugin<Record<string, never>> = defineNuxtPlugin({
     nuxtApp.vueApp.use(convexVue, { client: config.client, url })
     installConvexSsrBridge(
       nuxtApp.vueApp,
-      createNuxtSsrBridge(url, dependencies, config.ssr ?? true),
+      createNuxtSsrBridge(url, dependencies(url), config.ssr ?? true),
     )
   },
 })

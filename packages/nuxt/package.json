@@ -28,11 +28,6 @@
       "types": "./dist/runtime/index.d.ts",
       "import": "./dist/runtime/index.js",
       "default": "./dist/runtime/index.js"
-    },
-    "./server": {
-      "types": "./dist/runtime/server/index.d.ts",
-      "import": "./dist/runtime/server/index.js",
-      "default": "./dist/runtime/server/index.js"
     }
   },
   "repository": {

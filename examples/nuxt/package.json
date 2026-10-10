@@ -9,6 +9,7 @@
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
+    "@j-boardman/convex-example-backend": "workspace:*",
     "@j-boardman/convex-nuxt": "workspace:*",
     "convex": "1.45.0",
     "nuxt": "4.5.2",

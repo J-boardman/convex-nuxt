@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { api } from '../../backend/convex/_generated/api'
-import type { Id } from '../../backend/convex/_generated/dataModel'
+import { api } from '@j-boardman/convex-example-backend/api'
+import type { Id } from '@j-boardman/convex-example-backend/dataModel'
 
 // Rendered on the server, then kept live in the browser without a refetch.
 const tasks = useConvexQuery(api.tasks.list)

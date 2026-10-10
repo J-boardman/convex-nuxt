@@ -9,9 +9,6 @@
       "@j-boardman/convex-vue": [
         "packages/vue/src/index.ts"
       ],
-      "@j-boardman/convex-nuxt/server": [
-        "packages/nuxt/src/runtime/server/index.ts"
-      ],
       "@j-boardman/convex-nuxt": [
         "packages/nuxt/src/module.ts"
       ]

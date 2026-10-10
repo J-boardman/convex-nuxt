@@ -1,3 +1,4 @@
+import type {} from 'nuxt/schema'
 import type { ConvexVueClientOptions } from '@j-boardman/convex-vue'
 
 /** Only JSON-serializable client flags can travel through runtime config. */

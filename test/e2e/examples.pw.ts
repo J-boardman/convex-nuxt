@@ -47,7 +47,7 @@ test('tasks stay live from first render through writes', async ({ page }, testIn
   expect(errors).toEqual([])
 })
 
-test('Nuxt hydrates the server result without waiting for Convex', async ({
+test('Nuxt serves Convex data from the server and hydrates it', async ({
   page,
   request,
 }, testInfo) => {
@@ -58,6 +58,9 @@ test('Nuxt hydrates the server result without waiting for Convex', async ({
 
   const html = await (await request.get('/')).text()
   expect(html, 'the server renders the query result').toContain(seeded)
+  const fromRoute = await (await request.get('/api/tasks')).json() as { text: string }[]
+  expect(fromRoute.map(task => task.text), 'a server route reads Convex')
+    .toContain(seeded)
 
   // Hold the WebSocket open without answering, so anything on screen after
   // hydration must have come from the server payload.

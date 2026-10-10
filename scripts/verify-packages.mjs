@@ -121,12 +121,10 @@ import assert from 'node:assert/strict'
 import convexNuxt from '@j-boardman/convex-nuxt'
 import * as convexVue from '@j-boardman/convex-vue'
 import * as nuxtRuntime from '@j-boardman/convex-nuxt/runtime'
-import * as nuxtServer from '@j-boardman/convex-nuxt/server'
 
 assert.equal(typeof convexNuxt, 'function')
 assert.equal(typeof convexVue.convexVue, 'object')
 assert.equal(typeof nuxtRuntime.useConvexQuery, 'function')
-assert.equal(typeof nuxtServer.useConvexHttpClient, 'function')
 `)
 
   await writeFile(join(consumerRoot, 'app.vue'), `

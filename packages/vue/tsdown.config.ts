@@ -3,8 +3,7 @@ import { defineConfig } from 'tsdown'
 export default defineConfig({
   entry: {
     index: 'src/index.ts',
-    'adapter/index': 'src/adapter/index.ts',
-    'server/index': 'src/server/index.ts',
+    'adapter/index': 'src/adapter/ssr.ts',
   },
   dts: true,
   deps: {

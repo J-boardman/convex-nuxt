@@ -1,11 +1,8 @@
 import { makeFunctionReference } from 'convex/server'
 import type { PaginationOptions, PaginationResult } from 'convex/server'
-import type { Value } from 'convex/values'
+import type { JSONValue, Value } from 'convex/values'
 import { ref } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
-import type {
-  ConvexSsrSeed,
-} from '../../packages/vue/src/adapter/index'
 import {
   createNuxtSsrBridge,
 } from '../../packages/nuxt/src/runtime/ssr-bridge-core'
@@ -19,7 +16,7 @@ interface SeedHarness {
 }
 
 function createSeedHarness(
-  payload: Map<string, ConvexSsrSeed>,
+  payload: Map<string, JSONValue>,
   loadQuery: () => Promise<Value>,
 ): SeedHarness {
   const pendingTasks: Promise<void>[] = []
@@ -27,7 +24,7 @@ function createSeedHarness(
     createQueryLoader: vi.fn(() => loadQuery),
     useAsyncData(key, handler, enabled) {
       const cached = payload.get(key)
-      const data = ref<ConvexSsrSeed | undefined>(cached)
+      const data = ref<JSONValue | undefined>(cached)
       const error = ref<unknown>()
       const status = ref<'error' | 'idle' | 'pending' | 'success'>(
         cached ? 'success' : enabled ? 'pending' : 'idle',
@@ -49,7 +46,7 @@ function createSeedHarness(
 
 describe('Nuxt SSR bridge', () => {
   it('hydrates from its opaque payload key without loading again', async () => {
-    const payload = new Map<string, ConvexSsrSeed>()
+    const payload = new Map<string, JSONValue>()
     const serverLoad = vi.fn(async () => ['server result'])
     const serverHarness = createSeedHarness(payload, serverLoad)
     const query = makeFunctionReference<'query', { viewer: string }, string[]>(
@@ -90,7 +87,7 @@ describe('Nuxt SSR bridge', () => {
   })
 
   it('does not create a query loader for a disabled seed', () => {
-    const payload = new Map<string, ConvexSsrSeed>()
+    const payload = new Map<string, JSONValue>()
     const harness = createSeedHarness(payload, vi.fn())
     const bridge = createNuxtSsrBridge(
       'https://example.convex.cloud',
@@ -113,7 +110,7 @@ describe('Nuxt SSR bridge', () => {
   })
 
   it('exposes the configured server-rendering default', () => {
-    const payload = new Map<string, ConvexSsrSeed>()
+    const payload = new Map<string, JSONValue>()
     const harness = createSeedHarness(payload, vi.fn())
 
     expect(createNuxtSsrBridge(
@@ -128,7 +125,7 @@ describe('Nuxt SSR bridge', () => {
       body: string
       sequence: bigint
     }
-    const payload = new Map<string, ConvexSsrSeed>()
+    const payload = new Map<string, JSONValue>()
     const firstPage: PaginationResult<Message> = {
       continueCursor: 'next-page',
       isDone: false,

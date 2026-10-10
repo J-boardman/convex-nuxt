@@ -170,31 +170,24 @@ binding.
 These functions use Vue injection and must be called while the current Vue app
 context is available.
 
-## One-shot server calls and generic Vue SSR
+## Server rendering without Nuxt
 
-Import server utilities from the separate server entry:
+During server rendering the plugin creates no WebSocket client. Fetch on the
+server with Convex's own `ConvexHttpClient`, one per request, and pass the
+result to the same composable as `initialData` on both server and browser:
 
 ```ts
-import { createConvexHttpClient } from '@j-boardman/convex-vue/server'
+import { ConvexHttpClient } from 'convex/browser'
 
-const client = createConvexHttpClient({
-  url: process.env.CONVEX_URL!,
-  token: requestToken,
-})
-
-const tasks = await client.query(api.tasks.list, {})
+const client = new ConvexHttpClient(process.env.CONVEX_URL!, { auth: token })
+const initialData = await client.query(api.tasks.list, {})
 ```
 
-Generic Vue SSR has no standard request context or hydration payload. Create a
-fresh HTTP client for each request, encode values with `encodeConvexSsrSeed`,
-and pass the decoded result as `initialData` to the same composable on the
-server and browser. A framework adapter can instead implement the contract from
-`@j-boardman/convex-vue/adapter`.
-
-If `server: true` is explicitly requested without an adapter or `initialData`,
-the composable fails early instead of silently rendering a permanent loading
-state. Nuxt applications should use `@j-boardman/convex-nuxt`, which automates
-this transport.
+Serialize the value with `convexToJson` from `convex/values` if it contains
+Convex-only types such as `bigint`. A query that asks for `server: true`
+without `initialData` throws rather than rendering a permanent loading state.
+Nuxt applications should use `@j-boardman/convex-nuxt`, which does all of this
+automatically.
 
 ## License
 

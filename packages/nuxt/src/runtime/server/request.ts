@@ -1,12 +1,11 @@
-import {
-  createConvexHttpClient,
-} from '@j-boardman/convex-vue/server'
-import type {
-  ConvexHttpClientOptions,
-} from '@j-boardman/convex-vue/server'
-import type { ConvexHttpClient } from 'convex/browser'
+import { ConvexHttpClient } from 'convex/browser'
 import type { H3Event } from 'h3'
 import { resolveConvexRuntimeOptions } from '../config.js'
+
+export type ConvexHttpClientOptions = Omit<
+  NonNullable<ConstructorParameters<typeof ConvexHttpClient>[1]>,
+  'auth'
+>
 
 export type ConvexServerToken =
   | string
@@ -47,10 +46,9 @@ export async function createConvexHttpClientForRequest(
     ? await resolveServerToken(options.event)
     : options.token
 
-  return createConvexHttpClient({
-    clientOptions: options.clientOptions,
-    token,
-    url,
+  return new ConvexHttpClient(url, {
+    ...options.clientOptions,
+    ...(token ? { auth: token } : {}),
   })
 }
 

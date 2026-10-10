@@ -1,19 +1,15 @@
-import {
-  decodeConvexSsrSeed,
-  encodeConvexSsrSeed,
-} from '@j-boardman/convex-vue/adapter'
 import type {
   ConvexQuerySeedRequest,
   ConvexSsrBridge,
-  ConvexSsrSeed,
 } from '@j-boardman/convex-vue/adapter'
-import type { Value } from 'convex/values'
+import { convexToJson, jsonToConvex } from 'convex/values'
+import type { JSONValue, Value } from 'convex/values'
 import { hash } from 'ohash'
 import { computed } from 'vue'
 import type { Ref } from 'vue'
 
 export interface NuxtAsyncDataSeed {
-  readonly data: Readonly<Ref<ConvexSsrSeed | undefined>>
+  readonly data: Readonly<Ref<JSONValue | undefined>>
   readonly error: Readonly<Ref<unknown>>
   readonly status: Readonly<Ref<'error' | 'idle' | 'pending' | 'success'>>
 }
@@ -24,7 +20,7 @@ export interface NuxtSsrBridgeDependencies {
   ) => () => Promise<Value>
   useAsyncData: (
     key: string,
-    handler: () => Promise<ConvexSsrSeed>,
+    handler: () => Promise<JSONValue>,
     enabled: boolean,
   ) => NuxtAsyncDataSeed
 }
@@ -51,16 +47,16 @@ export function createNuxtSsrBridge(
           }
       const asyncData = dependencies.useAsyncData(
         key,
-        async () => encodeConvexSsrSeed(await loadQuery()),
+        async () => convexToJson(await loadQuery()),
         request.enabled,
       )
 
       return {
         data: computed<ValueType | undefined>(() => {
           const seed = asyncData.data.value
-          return seed
-            ? decodeConvexSsrSeed<ValueType & Value>(seed) as ValueType
-            : undefined
+          return seed === undefined
+            ? undefined
+            : jsonToConvex(seed) as ValueType
         }),
         error: computed<Error | undefined>(() =>
           normalizeError(asyncData.error.value),

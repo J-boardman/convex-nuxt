@@ -82,7 +82,7 @@ export function useConvexClient(): ConvexClient {
   if (!runtime.client) {
     throw new Error(
       'useConvexClient() is browser-only. '
-      + 'Use createConvexHttpClient() from @j-boardman/convex-vue/server during SSR.',
+      + 'Use ConvexHttpClient from convex/browser during SSR.',
     )
   }
   if (runtime.client.closed) {

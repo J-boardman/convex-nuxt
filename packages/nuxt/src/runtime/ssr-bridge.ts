@@ -4,10 +4,9 @@ import {
 import type {
   ConvexAuthSeedRequest,
   ConvexQuerySeedRequest,
-  ConvexSsrSeed,
 } from '@j-boardman/convex-vue/adapter'
 import { useConvexClient } from '@j-boardman/convex-vue'
-import type { Value } from 'convex/values'
+import type { JSONValue, Value } from 'convex/values'
 import { useAsyncData, useRequestEvent, useRuntimeConfig } from 'nuxt/app'
 import type { App } from 'vue'
 import {
@@ -52,7 +51,7 @@ function createQueryLoader(
 
 function useQueryAsyncData(
   key: string,
-  handler: () => Promise<ConvexSsrSeed>,
+  handler: () => Promise<JSONValue>,
   enabled: boolean,
 ): NuxtAsyncDataSeed {
   return useAsyncData(key, handler, {

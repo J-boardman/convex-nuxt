@@ -1,14 +1,13 @@
-import type {
-  ConvexHttpClientOptions,
-} from '@j-boardman/convex-vue/server'
 import type { ConvexHttpClient } from 'convex/browser'
 import type { H3Event } from 'h3'
 import { createConvexHttpClientForRequest } from './request.js'
+import type { ConvexHttpClientOptions } from './request.js'
 
 export {
   setConvexServerToken,
 } from './request'
 export type {
+  ConvexHttpClientOptions,
   ConvexServerRequestContext,
   ConvexServerToken,
 } from './request'

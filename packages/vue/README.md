@@ -156,9 +156,14 @@ Provider token failures enter an explicit error state and are rethrown to the
 Convex client. Signing out clears auth and stale callbacks cannot overwrite the
 newer state.
 
-The repository's [auth adapter guide](https://github.com/J-boardman/convex-nuxt/blob/main/docs/auth-adapters.md)
-documents the complete contract and the first-party Convex Auth v2 reference
-binding.
+The getter must synchronously return the session manager's current state:
+
+- `isLoading` stays true until the session manager knows whether a session
+  exists.
+- `isAuthenticated` describes the local session, not Convex's confirmation;
+  gate UI on `useConvexAuth()` instead.
+- `fetchAccessToken` returns a JWT the Convex deployment accepts, or `null`
+  once the session has ended. `forceRefreshToken` must bypass any cached token.
 
 ## Connection and client access
 

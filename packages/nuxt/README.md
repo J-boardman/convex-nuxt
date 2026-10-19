@@ -117,8 +117,8 @@ the browser provider settles and Convex confirms the new token.
 Auth must be configured before page queries begin. Late setup throws with a
 targeted message instead of allowing an unauthenticated subscription race.
 
-The repository's [auth adapter guide](https://github.com/J-boardman/convex-nuxt/blob/main/docs/auth-adapters.md)
-shows the provider contract and the first-party Convex Auth v2 H3/SSR design.
+The `serverToken` callback must read the current request's session, never a
+process-global one. See the Vue package README for the provider contract.
 
 ## Server routes
 

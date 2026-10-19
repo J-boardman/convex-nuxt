@@ -7,8 +7,7 @@ from an abandoned community implementation.
 This workspace produces two public packages:
 
 - [`@j-boardman/convex-vue`](./packages/vue) contains the shared Vue runtime,
-  typed composables, authentication, pagination, and framework-neutral server
-  utilities.
+  typed composables, authentication, and pagination.
 - [`@j-boardman/convex-nuxt`](./packages/nuxt) installs that same runtime in
   Nuxt and adds auto-imports, request-scoped authentication, and automatic
   server-render-to-live query hydration.
@@ -17,21 +16,36 @@ Choose the Vue package for a Vue application. Choose the Nuxt package for a
 Nuxt application; it installs the Vue runtime as a dependency, so application
 code does not need two integrations.
 
-## Current scope
+The shared runtime provides typed live queries (single, keyed sets, and
+paginated), mutations with Convex-native optimistic updates, actions,
+provider-neutral authentication, and connection state. Nuxt adds
+server rendering that hands off to a live subscription without a second fetch,
+per-request authentication on the server, and auto-imports. Auth tokens never
+reach public runtime config or the hydration payload.
 
-The shared runtime supports generated Convex function references, reactive and
-skipped queries, stale data, typed mutations and actions, Convex-native
-optimistic updates, reactive pagination, generic authentication, connection
-state, explicit teardown, and one-shot HTTP clients.
+## Support
 
-Nuxt additionally supports anonymous and authenticated SSR, Convex-safe Nuxt
-payload transport, hydration without a duplicate HTTP query, direct Convex
-reads during client navigation, and H3 request-token isolation. Authentication
-tokens are never put in public runtime config or hydration payloads.
+| | Supported |
+| --- | --- |
+| Vue | 3.5 and later |
+| Nuxt | 4.5 and later (Nuxt 3 is not supported) |
+| Convex | 1.45 and later |
+| Node.js | 22 and later |
+| Nitro presets | Node server, Cloudflare Module |
+| Module format | ESM only |
 
-The packages remain pre-release software. Their release gate includes the
-packed-consumer and browser verification matrix in the
-[design](./docs/convex-nuxt-design.md).
+The packages are pre-release. Until 1.0, a minor version may change the public
+API; the changelog says how to migrate.
+
+## Coming from community packages
+
+| Before | Here |
+| --- | --- |
+| `const { mutate } = useConvexMutation(...)` | `const mutate = useConvexMutation(...)`, called directly |
+| A hand-rolled `client.setAuth` plugin | `setupConvexAuth(() => ({ isLoading, isAuthenticated, fetchAccessToken }))` |
+| `await query.suspense()` in Nuxt pages | Nothing: Nuxt queries server-render automatically |
+| Custom pagination | `useConvexPaginatedQuery(query, args, { initialNumItems })` |
+| String function names | Generated `api.*` references |
 
 ## Examples
 
@@ -48,6 +62,8 @@ pnpm dev
 
 `pnpm dev` builds both packages, starts a local Convex deployment, and serves
 the Vue example and the Nuxt example against it.
+
+Contributors should read [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## License
 

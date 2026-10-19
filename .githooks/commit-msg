@@ -69,7 +69,7 @@ if [ -n "$scope" ]; then
       nuxt:packages/nuxt/*|nuxt:examples/nuxt/*) matches=yes ;;
       auth:*auth*|pagination:*pagination*) matches=yes ;;
       adapters:packages/vue/src/adapter/*|adapters:packages/nuxt/src/runtime/*) matches=yes ;;
-      playground:examples/*) matches=yes ;;
+      playground:examples/*|playground:showcase/*) matches=yes ;;
       ci:.github/*|ci:.githooks/*) matches=yes ;;
       build:package.json|build:tsconfig*|build:pnpm-lock.yaml|build:pnpm-workspace.yaml) matches=yes ;;
     esac

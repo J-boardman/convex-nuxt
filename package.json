@@ -12,6 +12,7 @@
     "build": "pnpm --filter @j-boardman/convex-vue run build && pnpm --filter @j-boardman/convex-nuxt run build",
     "changeset": "changeset",
     "dev": "pnpm build && node scripts/dev.mjs",
+    "dev:showcase": "pnpm build && pnpm --filter @j-boardman/convex-showcase dev",
     "lint": "eslint .",
     "prepare": "git config core.hooksPath .githooks",
     "release": "pnpm verify && changeset publish",

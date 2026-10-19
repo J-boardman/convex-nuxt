@@ -6,6 +6,7 @@
 packages/vue    @j-boardman/convex-vue: the runtime and composables
 packages/nuxt   @j-boardman/convex-nuxt: the Nuxt module over that runtime
 examples/       a task list for each package, sharing one Convex backend
+showcase/       a live poll that exercises SSR, auth, pagination, and offline writes
 test/           unit, type, Nuxt module, and live browser tests
 ```
 
@@ -16,16 +17,17 @@ Package code never imports example or test code.
 | Command | What it does |
 | --- | --- |
 | `pnpm dev` | Builds both packages, starts a local Convex deployment, and serves both examples against it. |
+| `pnpm dev:showcase` | Builds both packages and runs the showcase with its own local deployment. |
 | `pnpm typecheck` | Builds, then typechecks packages, examples, and the public type tests. |
 | `pnpm lint` | ESLint over the repository. |
 | `pnpm test` | Unit tests, Nuxt module tests, and packed-package checks. Needs no credentials. |
-| `pnpm test:live` | Starts a disposable local Convex backend and drives the examples in Chrome. |
+| `pnpm test:live` | Starts disposable local Convex backends and drives the examples and the showcase in Chrome. |
 | `pnpm verify` | `typecheck`, `lint`, and `test` together; CI runs this on Node 22 and 24. |
 
 `pnpm test:live` runs a pinned backend version (see
 `scripts/run-live-tests.mjs`) because newer artifacts can need newer host
-libraries. Raise the pin deliberately and rerun the suite. Set `CONVEX_URL` to
-run the browser tests against a deployment you manage instead.
+libraries. Raise the pin deliberately and rerun the suite. The showcase's
+tests are the live proof of authenticated server rendering and pagination.
 
 ## Commits
 
@@ -51,9 +53,3 @@ release is bootstrapped once:
    `release` environment.
 3. In GitHub, create the protected `release` environment and allow Actions to
    create pull requests.
-
-## Before 1.0
-
-The live suite does not yet cover authenticated server rendering or
-pagination against a real backend; unit tests with a fake client cover both.
-The showcase app is expected to restore that coverage.

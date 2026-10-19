@@ -63,6 +63,11 @@ pnpm dev
 `pnpm dev` builds both packages, starts a local Convex deployment, and serves
 the Vue example and the Nuxt example against it.
 
+[`showcase`](./showcase) is a fuller Nuxt app: a live poll with signed-in
+server rendering, optimistic votes, paginated history, and a panel that traces
+each query and can cut the connection to Convex. Run it with
+`pnpm dev:showcase`.
+
 Contributors should read [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## License

@@ -1,19 +1,14 @@
 import { execFileSync, spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import {
-  cp,
-  mkdir,
-  mkdtemp,
-  rm,
-  symlink,
-} from 'node:fs/promises'
+import { cp, mkdir, mkdtemp, rm, symlink } from 'node:fs/promises'
 import { createServer } from 'node:net'
 import { homedir, tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import process from 'node:process'
 import { setTimeout as delay } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
+import { createPrivateKey, jwksFor } from '../showcase/scripts/keys.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm'
@@ -108,87 +103,107 @@ async function waitForBackend(url, child) {
   throw new Error('Timed out waiting for the disposable Convex backend.')
 }
 
-async function stopBackend(child) {
-  if (child.exitCode !== null || child.signalCode !== null) return
-
-  const exited = new Promise(resolveExit => child.once('exit', resolveExit))
-  child.kill('SIGTERM')
-  await exited
-}
-
-function runAgainst(convexUrl) {
-  return run(pnpm, ['exec', 'playwright', 'test'], {
-    env: { ...process.env, CONVEX_URL: convexUrl },
+/**
+ * Starts a disposable backend and deploys a copy of `project`'s convex/
+ * folder to it, so a run can never touch the developer's own deployment.
+ */
+async function startBackend(project, { env = {}, seed } = {}) {
+  const directory = await mkdtemp(join(tmpdir(), 'convex-nuxt-live-'))
+  await cp(resolve(root, project, 'convex'), join(directory, 'convex'), {
+    filter: source => !source.endsWith('.env.local'),
+    recursive: true,
   })
-}
+  await cp(resolve(root, project, 'package.json'), join(directory, 'package.json'))
+  await symlink(resolve(root, 'node_modules'), join(directory, 'node_modules'))
 
-if (process.env.CONVEX_URL) {
-  await runAgainst(process.env.CONVEX_URL)
-}
-else {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), 'convex-nuxt-live-'))
-  let backend
+  const cloudPort = await reservePort()
+  let sitePort = await reservePort()
+  while (sitePort === cloudPort) sitePort = await reservePort()
+  const url = `http://127.0.0.1:${cloudPort}`
+  const binary = await ensureBackendBinary()
+  const instance = [
+    '--instance-name',
+    'convex-nuxt-live',
+    '--instance-secret',
+    randomBytes(32).toString('hex'),
+  ]
+  const adminKey = execFileSync(binary, ['keygen', 'admin-key', ...instance])
+    .toString()
+    .trim()
+  const child = spawn(binary, [
+    ...instance,
+    '--interface',
+    '127.0.0.1',
+    '--port',
+    String(cloudPort),
+    '--site-proxy-port',
+    String(sitePort),
+    '--local-storage',
+    join(directory, 'storage'),
+    join(directory, 'backend.sqlite3'),
+  ], {
+    cwd: directory,
+    stdio: ['ignore', 'ignore', 'inherit'],
+  })
+
+  const stop = async () => {
+    if (child.exitCode === null && child.signalCode === null) {
+      const exited = new Promise(resolveExit => child.once('exit', resolveExit))
+      child.kill('SIGTERM')
+      await exited
+    }
+    await rm(directory, { force: true, recursive: true })
+  }
 
   try {
-    const cloudPort = await reservePort()
-    let sitePort = await reservePort()
-    while (sitePort === cloudPort) sitePort = await reservePort()
-    const convexUrl = `http://127.0.0.1:${cloudPort}`
-
-    // Deploy a copy so the run cannot touch the developer's own deployment.
-    await cp(
-      resolve(root, 'examples/backend'),
-      temporaryRoot,
-      {
-        filter: source => !/(?:node_modules|\.env\.local)$/.test(source),
-        recursive: true,
-      },
-    )
-    await symlink(
-      resolve(root, 'node_modules'),
-      join(temporaryRoot, 'node_modules'),
-    )
-
-    const binary = await ensureBackendBinary()
-    const instance = [
-      '--instance-name',
-      'convex-nuxt-live',
-      '--instance-secret',
-      randomBytes(32).toString('hex'),
-    ]
-    const adminKey = execFileSync(binary, ['keygen', 'admin-key', ...instance])
-      .toString()
-      .trim()
-
-    backend = spawn(binary, [
-      ...instance,
-      '--interface',
-      '127.0.0.1',
-      '--port',
-      String(cloudPort),
-      '--site-proxy-port',
-      String(sitePort),
-      '--local-storage',
-      join(temporaryRoot, 'storage'),
-      join(temporaryRoot, 'backend.sqlite3'),
-    ], {
-      cwd: temporaryRoot,
-      stdio: ['ignore', 'ignore', 'inherit'],
-    })
-
-    await waitForBackend(convexUrl, backend)
-    await run(pnpm, ['exec', 'convex', 'deploy', '--yes'], {
-      cwd: temporaryRoot,
+    await waitForBackend(url, child)
+    const convex = (...args) => run(pnpm, ['exec', 'convex', ...args], {
+      cwd: directory,
       env: {
         ...process.env,
         CONVEX_SELF_HOSTED_ADMIN_KEY: adminKey,
-        CONVEX_SELF_HOSTED_URL: convexUrl,
+        CONVEX_SELF_HOSTED_URL: url,
       },
     })
-    await runAgainst(convexUrl)
+    for (const [name, value] of Object.entries(env)) {
+      await convex('env', 'set', name, value)
+    }
+    await convex('deploy', '--yes')
+    if (seed) await convex('run', seed)
+    return { stop, url }
   }
-  finally {
-    if (backend) await stopBackend(backend)
-    await rm(temporaryRoot, { recursive: true, force: true })
+  catch (error) {
+    await stop()
+    throw error
   }
+}
+
+const backends = []
+try {
+  const showcaseKey = await createPrivateKey()
+  const started = await Promise.allSettled([
+    startBackend('examples/backend'),
+    startBackend('showcase', {
+      env: { SHOWCASE_JWKS: jwksFor(showcaseKey) },
+      seed: 'seed:polls',
+    }),
+  ])
+  for (const result of started) {
+    if (result.status === 'fulfilled') backends.push(result.value)
+  }
+  const failure = started.find(result => result.status === 'rejected')
+  if (failure) throw failure.reason
+  const [examples, showcase] = backends
+
+  await run(pnpm, ['exec', 'playwright', 'test'], {
+    env: {
+      ...process.env,
+      CONVEX_URL: examples.url,
+      SHOWCASE_CONVEX_URL: showcase.url,
+      SHOWCASE_PRIVATE_KEY: showcaseKey,
+    },
+  })
+}
+finally {
+  await Promise.all(backends.map(backend => backend.stop()))
 }

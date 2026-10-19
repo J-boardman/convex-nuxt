@@ -7,8 +7,8 @@ import type { Id } from '~~/convex/_generated/dataModel'
 // live in the browser without being fetched again.
 const polls = useConvexQuery(api.polls.list)
 const viewer = useConvexQuery(api.polls.viewer)
-useQueryTrace('polls.list', () => polls.data)
-useQueryTrace('polls.viewer', () => viewer.data)
+useQueryTrace('polls.list', 'useConvexQuery(api.polls.list)', () => polls.data)
+useQueryTrace('polls.viewer', 'useConvexQuery(api.polls.viewer)', () => viewer.data)
 
 // The bar moves the moment you click; Convex confirms or rolls it back.
 const vote = useConvexMutation(api.polls.vote).withOptimisticUpdate(
@@ -40,27 +40,37 @@ async function cast(pollId: Id<'polls'>, choice: 0 | 1) {
       : 'Your vote did not go through. Try again.'
   }
 }
-
-const panelOpen = ref(false)
 </script>
 
 <template>
   <div class="page">
+    <nav class="topbar" aria-label="Site">
+      <span class="wordmark">convex-nuxt <span>· showcase</span></span>
+      <ClientOnly>
+        <ConnectionStatus />
+        <template #fallback>
+          <p class="status" data-state="connecting">
+            <span class="status-dot" aria-hidden="true" />
+            Connecting…
+          </p>
+        </template>
+      </ClientOnly>
+      <a class="repo" href="https://github.com/J-boardman/convex-nuxt">GitHub</a>
+    </nav>
+
     <header class="masthead">
       <h1 class="title">
         Pick a side.<br>Watch it move.
       </h1>
       <div class="lede">
         <p>
-          Every vote reaches every open tab the moment it is cast. Open this
-          page in a second window and vote in one of them.
+          Every vote reaches every open tab as it is cast. Vote here, then
+          open a second window and watch the other side move.
         </p>
+        <InstallCommand />
         <p v-if="viewer.data" class="voter">
           You are voting as <strong>{{ viewer.data.name }}</strong>
         </p>
-        <ClientOnly>
-          <ConnectionStatus />
-        </ClientOnly>
       </div>
     </header>
 
@@ -80,24 +90,11 @@ const panelOpen = ref(false)
           @vote="cast(poll._id, $event)"
         />
       </section>
-      <RecentVotes />
+      <UnderTheHood />
     </main>
 
     <p class="problem" role="status">
       {{ problem }}
     </p>
-
-    <button
-      class="hood-toggle"
-      type="button"
-      :aria-expanded="panelOpen"
-      aria-controls="under-the-hood"
-      @click="panelOpen = !panelOpen"
-    >
-      {{ panelOpen ? 'Close' : 'Under the hood' }}
-    </button>
-    <ClientOnly>
-      <UnderTheHood v-show="panelOpen" id="under-the-hood" />
-    </ClientOnly>
   </div>
 </template>

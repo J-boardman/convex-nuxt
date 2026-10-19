@@ -72,7 +72,6 @@ test('a vote cast while the connection is cut is sent when it returns', async ({
   const { errors, page } = await visitor(browser)
   const before = (await storedCounts('Ship on Friday?'))?.[0] ?? 0
 
-  await page.getByRole('button', { name: 'Under the hood' }).click()
   await page.getByRole('switch', { name: 'Cut the connection to Convex' }).check()
   await side(page, 'Ship on Friday?', 'Ship it').click()
 
@@ -121,5 +120,5 @@ test('the page is usable from server HTML before Convex answers', async ({ page 
 
   await expect(page.locator('.voter strong')).not.toBeEmpty()
   await expect(page.getByRole('group', { name: 'Tabs or spaces?' })).toBeVisible()
-  await expect(page.locator('.feed-title')).toHaveText('Recent votes')
+  await expect(page.locator('.feed-item').first()).toBeVisible()
 })

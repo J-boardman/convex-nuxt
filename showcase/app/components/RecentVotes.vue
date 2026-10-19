@@ -2,28 +2,32 @@
 import { api } from '~~/convex/_generated/api'
 
 const feed = useConvexPaginatedQuery(api.activity.recent, {}, { initialNumItems: 6 })
-useQueryTrace('activity.recent', () => feed.results)
+useQueryTrace(
+  'activity.recent',
+  'useConvexPaginatedQuery(api.activity.recent, {}, { initialNumItems: 6 })',
+  () => feed.results,
+)
 </script>
 
 <template>
-  <aside class="feed" aria-labelledby="feed-title">
-    <h2 id="feed-title" class="feed-title">
-      Recent votes
-    </h2>
-    <p v-if="feed.error" class="notice">
+  <section class="hood-section" aria-labelledby="feed-title">
+    <h3 id="feed-title">
+      Votes as they arrive
+    </h3>
+    <p v-if="feed.error" class="hint">
       Recent votes could not load: {{ feed.error.message }}
     </p>
-    <p v-else-if="feed.state.status === 'exhausted' && feed.results.length === 0" class="notice">
+    <p v-else-if="feed.state.status === 'exhausted' && feed.results.length === 0" class="hint">
       No votes yet. Yours will be the first.
     </p>
-    <ol class="feed-list">
+    <TransitionGroup tag="ol" name="arrive" class="feed-list">
       <li v-for="entry in feed.results" :key="entry._id" class="feed-item">
         <span><strong>{{ entry.voterName }}</strong> picked <em>{{ entry.option }}</em></span>
         <span class="feed-meta">
           {{ entry.question }} · <NuxtTime :datetime="entry._creationTime" relative />
         </span>
       </li>
-    </ol>
+    </TransitionGroup>
     <button
       v-if="feed.state.status === 'ready' || feed.state.status === 'loadingMore'"
       class="more"
@@ -33,5 +37,5 @@ useQueryTrace('activity.recent', () => feed.results)
     >
       {{ feed.state.status === 'loadingMore' ? 'Loading older votes…' : 'Show older votes' }}
     </button>
-  </aside>
+  </section>
 </template>

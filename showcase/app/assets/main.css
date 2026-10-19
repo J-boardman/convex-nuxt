@@ -108,36 +108,23 @@ code {
   font-weight: 400;
 }
 
-/* Masthead */
+/* Intro */
 
-.masthead {
-  align-items: end;
+.intro {
+  align-items: center;
   display: grid;
-  gap: 2rem 3rem;
-  grid-template-columns: 1.3fr 1fr;
-  margin-bottom: clamp(2.5rem, 6vw, 4.5rem);
+  gap: 1rem 3rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-bottom: 1.5rem;
 }
 
-.title {
-  font: 800 clamp(3rem, 8.5vw, 6.75rem) / 0.9 var(--display);
-  letter-spacing: -0.035em;
-  margin: 0;
-}
-
-.lede {
-  min-width: 0;
-}
-
-.lede p {
-  margin: 0 0 1rem;
-  max-width: 38ch;
-}
-
-.voter {
+.intro p {
   color: var(--fog);
+  margin: 0;
+  max-width: 60ch;
 }
 
-.voter strong {
+.intro strong {
   color: var(--graphite);
 }
 
@@ -148,8 +135,7 @@ code {
   border-radius: 12px;
   display: flex;
   gap: 0.75rem;
-  margin-bottom: 1rem;
-  max-width: 100%;
+  min-width: 0;
   padding: 0.4rem 0.4rem 0.4rem 0.9rem;
 }
 
@@ -158,6 +144,7 @@ code {
   min-width: 0;
   font-size: 0.82rem;
   overflow-x: auto;
+  scrollbar-width: none;
   white-space: nowrap;
 }
 
@@ -254,6 +241,18 @@ code {
   text-decoration-color: var(--marigold);
 }
 
+.meta {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.6rem;
+  margin-top: 0.3rem;
+}
+
+.side-b .meta {
+  flex-direction: row-reverse;
+}
+
 .tally {
   color: var(--fog);
   font: 400 0.8rem/1.4 var(--mono);
@@ -276,7 +275,6 @@ code {
   border-radius: 999px;
   font: 600 0.7rem/1 var(--mono);
   letter-spacing: 0.06em;
-  margin-top: 0.3rem;
   padding: 0.35rem 0.6rem;
   text-transform: uppercase;
 }
@@ -348,6 +346,58 @@ code {
 
 .poll.tugged .knot {
   animation: tug 600ms ease-out;
+}
+
+/* The featured poll is the page's hero: same tug, at full size. */
+.poll.featured {
+  border-radius: 28px;
+  margin-bottom: clamp(1.5rem, 4vw, 3rem);
+  padding: clamp(1.5rem, 4vw, 3rem) clamp(1.25rem, 4vw, 3.25rem) clamp(1.75rem, 4vw, 3rem);
+}
+
+.poll.featured .question {
+  font-size: 1.05rem;
+  margin-bottom: 0.75rem;
+}
+
+.poll.featured .option {
+  font-size: clamp(2.6rem, 10vw, 8rem);
+  letter-spacing: -0.045em;
+  line-height: 0.85;
+}
+
+.poll.featured .meta {
+  margin-top: 0.75rem;
+}
+
+.poll.featured .tally {
+  font-size: 0.9rem;
+}
+
+.poll.featured .rope {
+  height: 1.6rem;
+  margin-top: 1.5rem;
+}
+
+.poll.featured .knot {
+  border-width: 0.4rem;
+  height: 3rem;
+  left: clamp(1.5rem, var(--share), calc(100% - 1.5rem));
+  width: 3rem;
+}
+
+.poll.featured .spark {
+  font-size: 1.6rem;
+}
+
+.poll.featured .side-a .spark {
+  left: auto;
+  right: 0;
+}
+
+.poll.featured .side-b .spark {
+  left: 0;
+  right: auto;
 }
 
 .empty-note {
@@ -566,7 +616,7 @@ code {
 }
 
 @media (max-width: 900px) {
-  .masthead,
+  .intro,
   .layout {
     grid-template-columns: minmax(0, 1fr);
   }

@@ -27,6 +27,10 @@ const vote = useConvexMutation(api.polls.vote).withOptimisticUpdate(
   },
 )
 
+// The first poll is the page's hero; the rest sit beside the internals.
+const featured = computed(() => polls.data?.[0])
+const others = computed(() => polls.data?.slice(1) ?? [])
+
 const problem = ref<string>()
 
 async function cast(pollId: Id<'polls'>, choice: 0 | 1) {
@@ -58,33 +62,37 @@ async function cast(pollId: Id<'polls'>, choice: 0 | 1) {
       <a class="repo" href="https://github.com/J-boardman/convex-nuxt">GitHub</a>
     </nav>
 
-    <header class="masthead">
-      <h1 class="title">
-        Pick a side.<br>Watch it move.
-      </h1>
-      <div class="lede">
-        <p>
-          Every vote reaches every open tab as it is cast. Vote here, then
-          open a second window and watch the other side move.
-        </p>
-        <InstallCommand />
-        <p v-if="viewer.data" class="voter">
-          You are voting as <strong>{{ viewer.data.name }}</strong>
-        </p>
-      </div>
+    <header class="intro">
+      <p>
+        A live poll built with <strong>convex-nuxt</strong>. Every vote
+        reaches every open tab as it is cast: vote, then open a second window
+        and watch the rope move.
+        <span v-if="viewer.data" class="voter">
+          You are voting as <strong>{{ viewer.data.name }}</strong>.
+        </span>
+      </p>
+      <InstallCommand />
     </header>
 
+    <p v-if="polls.error" class="notice">
+      The polls could not load: {{ polls.error.message }}
+    </p>
+    <p v-else-if="polls.data?.length === 0" class="notice">
+      There are no polls yet. Run <code>npx convex run seed:polls</code>
+      to create them.
+    </p>
+
+    <PollRow
+      v-if="featured"
+      :poll="featured"
+      featured
+      @vote="cast(featured._id, $event)"
+    />
+
     <main class="layout">
-      <section class="board" aria-label="Polls">
-        <p v-if="polls.error" class="notice">
-          The polls could not load: {{ polls.error.message }}
-        </p>
-        <p v-else-if="polls.data?.length === 0" class="notice">
-          There are no polls yet. Run <code>npx convex run seed:polls</code>
-          to create them.
-        </p>
+      <section class="board" aria-label="More polls">
         <PollRow
-          v-for="poll in polls.data"
+          v-for="poll in others"
           :key="poll._id"
           :poll="poll"
           @vote="cast(poll._id, $event)"

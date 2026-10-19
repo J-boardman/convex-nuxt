@@ -5,7 +5,7 @@ import type { api } from '~~/convex/_generated/api'
 type Poll = FunctionReturnType<typeof api.polls.list>[number]
 type Choice = 0 | 1
 
-const props = defineProps<{ poll: Poll }>()
+const props = defineProps<{ poll: Poll, featured?: boolean }>()
 const emit = defineEmits<{ vote: [choice: Choice] }>()
 const choices = [0, 1] as const
 
@@ -56,12 +56,12 @@ function retire(id: number) {
 <template>
   <article
     class="poll"
-    :class="{ empty: total === 0, tugged: sparks.length > 0 }"
+    :class="{ empty: total === 0, featured, tugged: sparks.length > 0 }"
     :style="{ '--share': `${share}%` }"
   >
-    <h2 class="question">
+    <component :is="featured ? 'h1' : 'h2'" class="question">
       {{ poll.question }}
-    </h2>
+    </component>
     <div class="sides" role="group" :aria-label="poll.question">
       <button
         v-for="choice in choices"
@@ -73,11 +73,13 @@ function retire(id: number) {
         @click="vote(choice)"
       >
         <span class="option">{{ poll.options[choice] }}</span>
-        <span class="tally">
-          <span class="percent">{{ percent(choice) }}</span>
-          {{ poll.counts[choice] }} {{ poll.counts[choice] === 1 ? 'vote' : 'votes' }}
+        <span class="meta">
+          <span class="tally">
+            <span class="percent">{{ percent(choice) }}</span>
+            {{ poll.counts[choice] }} {{ poll.counts[choice] === 1 ? 'vote' : 'votes' }}
+          </span>
+          <span class="mine" :class="{ hidden: poll.myChoice !== choice }">Your pick</span>
         </span>
-        <span class="mine" :class="{ hidden: poll.myChoice !== choice }">Your pick</span>
         <span
           v-for="spark in sparks.filter(spark => spark.choice === choice)"
           :key="spark.id"
